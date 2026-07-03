@@ -13,7 +13,11 @@ export default function AppShell({
   const [mobileOpen, setMobileOpen] = useState(false);
   const pathname = usePathname();
 
-  const isAuthPage = pathname === "/" || pathname === "/login";
+  const isAuthPage =
+    pathname === "/" ||
+    pathname === "/login" ||
+    pathname === "/forgot-password" ||
+    pathname === "/reset-password";
 
   if (isAuthPage) {
     return <>{children}</>;

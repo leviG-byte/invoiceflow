@@ -182,6 +182,12 @@ export default function LoginPage() {
       },
     ],
     submitButton: loading ? "Signing in..." : "Sign in",
+    textVariantButton: "Forgot password?",
+  };
+
+  const goToForgotPassword = (event: React.MouseEvent<HTMLButtonElement>) => {
+    event.preventDefault();
+    router.push("/forgot-password");
   };
 
   return (
@@ -199,6 +205,7 @@ export default function LoginPage() {
           errorField={error}
           isSubmitting={loading}
           onSubmit={handleSubmit}
+          goTo={goToForgotPassword}
         />
       </span>
     </section>
