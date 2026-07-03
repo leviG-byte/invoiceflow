@@ -1,5 +1,17 @@
 import "./globals.css";
+import { Geist, Geist_Mono } from "next/font/google";
 import AppShell from "@/components/AppShell";
+import { ToastProvider } from "@/components/ui/Toast";
+
+const geistSans = Geist({
+  variable: "--font-geist-sans",
+  subsets: ["latin"],
+});
+
+const geistMono = Geist_Mono({
+  variable: "--font-geist-mono",
+  subsets: ["latin"],
+});
 
 export const metadata = {
   title: "InvoiceFlow",
@@ -13,8 +25,10 @@ export default function RootLayout({
 }) {
   return (
     <html lang="en">
-      <body>
-        <AppShell>{children}</AppShell>
+      <body className={`${geistSans.variable} ${geistMono.variable}`}>
+        <ToastProvider>
+          <AppShell>{children}</AppShell>
+        </ToastProvider>
       </body>
     </html>
   );

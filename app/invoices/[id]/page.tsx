@@ -8,9 +8,22 @@ import { generateInvoicePdf } from "@/lib/generate-invoice-pdf";
 import {
   InvoiceItem,
   SavedInvoice,
+  calculateInvoiceTotals,
   getDisplayStatus,
+  getItemAmount,
+  getItemType,
   getStatusClasses,
+  sortItemsByDate,
 } from "@/lib/invoice-utils";
+import { useToast } from "@/components/ui/Toast";
+import { CardSkeleton, Skeleton } from "@/components/ui/Skeleton";
+import {
+  ArrowLeft,
+  Download,
+  Pencil,
+  Send,
+  BellRing,
+} from "lucide-react";
 
 type DatabaseInvoiceRow = {
   id: string;
@@ -25,6 +38,8 @@ type DatabaseInvoiceRow = {
   payment_notes: string | null;
   payment_method: string | null;
   payment_date: string | null;
+  tax_rate: number | string | null;
+  discount: number | string | null;
 };
 
 type DatabaseClientRow = {
@@ -62,12 +77,13 @@ type InvoiceDetail = SavedInvoice & {
 
 export default function InvoiceDetailPage() {
   const supabase = useMemo(() => createClient(), []);
+  const { toast } = useToast();
   const params = useParams();
   const searchParams = useSearchParams();
   const id = params.id as string;
 
   const [invoice, setInvoice] = useState<InvoiceDetail | null>(null);
-  const [message, setMessage] = useState("");
+  const [notFoundMessage, setNotFoundMessage] = useState("");
   const [isLoading, setIsLoading] = useState(true);
   const [isSending, setIsSending] = useState(false);
   const [businessProfile, setBusinessProfile] = useState<BusinessProfile>({
@@ -81,7 +97,6 @@ export default function InvoiceDetailPage() {
   useEffect(() => {
     async function loadPageData() {
       setIsLoading(true);
-      setMessage("");
 
       const {
         data: { user },
@@ -90,7 +105,7 @@ export default function InvoiceDetailPage() {
 
       if (userError || !user) {
         console.error("User error:", userError);
-        setMessage("You must be logged in.");
+        setNotFoundMessage("You must be logged in.");
         setIsLoading(false);
         return;
       }
@@ -114,7 +129,7 @@ export default function InvoiceDetailPage() {
 
       if (invoiceError || !invoiceData) {
         console.error("Load invoice error:", invoiceError);
-        setMessage(invoiceError?.message || "Invoice not found.");
+        setNotFoundMessage(invoiceError?.message || "Invoice not found.");
         setIsLoading(false);
         return;
       }
@@ -145,17 +160,23 @@ export default function InvoiceDetailPage() {
         issueDate: row.issue_date || "",
         dueDate: row.due_date || "",
         status: row.payment_date ? "Paid" : row.status === "Paid" ? "Paid" : "Pending",
-        items: Array.isArray(row.items)
-          ? row.items.map((item) => ({
-              date: item.date ?? "",
-              description: item.description ?? "",
-              hours: item.hours ?? "",
-              rate: item.rate ?? "",
-            }))
-          : [],
+        items: sortItemsByDate(
+          Array.isArray(row.items)
+            ? row.items.map((item) => ({
+                date: item.date ?? "",
+                description: item.description ?? "",
+                hours: item.hours ?? "",
+                rate: item.rate ?? "",
+                type: getItemType(item),
+                amount: item.amount ?? "",
+              }))
+            : []
+        ),
         paymentNotes: row.payment_notes || "",
         paymentMethod: row.payment_method || "",
         paymentDate: row.payment_date || "",
+        taxRate: Number(row.tax_rate) || 0,
+        discount: Number(row.discount) || 0,
         total: Number(row.total) || 0,
       });
 
@@ -186,6 +207,7 @@ export default function InvoiceDetailPage() {
     if (shouldDownload === "1" && invoice) {
       handleDownloadPDF(invoice);
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [invoice, searchParams]);
 
   async function handleDownloadPDF(currentInvoice: InvoiceDetail) {
@@ -194,72 +216,36 @@ export default function InvoiceDetailPage() {
       pdf.save(`${currentInvoice.invoiceNumber}.pdf`);
     } catch (error) {
       console.error(error);
-      setMessage("There was a problem generating the PDF.");
+      toast("There was a problem generating the PDF.", "error");
     }
   }
 
-  async function handleSendInvoice() {
+  async function handleSendInvoice(kind: "invoice" | "reminder" = "invoice") {
     if (!invoice) return;
 
     try {
       setIsSending(true);
-      setMessage("Preparing invoice...");
 
-      const clientEmail = invoice.clientEmail?.trim();
-
-      if (!clientEmail) {
+      if (!invoice.clientEmail?.trim()) {
         throw new Error("This client does not have an email address.");
       }
 
-      const paymentMethodHtml = invoice.paymentMethod?.trim()
-        ? `<p style="margin: 4px 0;"><strong>Payment Method:</strong> ${invoice.paymentMethod}</p>`
-        : "";
-
-      const paymentDateHtml = invoice.paymentDate?.trim()
-        ? `<p style="margin: 4px 0;"><strong>Payment Date:</strong> ${invoice.paymentDate}</p>`
-        : "";
-
-      const paymentNotesHtml = invoice.paymentNotes?.trim()
-        ? `
-          <div style="margin: 16px 0; padding: 12px; border: 1px solid #e5e7eb; border-radius: 8px; background: #ffffff;">
-            <p style="margin: 4px 0 8px 0;"><strong>Payment Notes:</strong></p>
-            <p style="margin: 0; white-space: pre-line;">${invoice.paymentNotes}</p>
-          </div>
-        `
-        : "";
-
-      const emailHtml = `
-        <div style="font-family: Arial, sans-serif; line-height: 1.6; color: #111827;">
-          <h2 style="margin-bottom: 8px;">Invoice ${invoice.invoiceNumber}</h2>
-          <p>Hello ${invoice.clientName},</p>
-          <p>Please find your invoice details below.</p>
-
-          <div style="margin: 16px 0; padding: 12px; border: 1px solid #e5e7eb; border-radius: 8px; background: #f9fafb;">
-            <p style="margin: 4px 0;"><strong>Invoice Number:</strong> ${invoice.invoiceNumber}</p>
-            <p style="margin: 4px 0;"><strong>Issue Date:</strong> ${invoice.issueDate}</p>
-            <p style="margin: 4px 0;"><strong>Due Date:</strong> ${invoice.dueDate}</p>
-            ${paymentMethodHtml}
-            ${paymentDateHtml}
-            <p style="margin: 4px 0;"><strong>Total:</strong> $${Number(invoice.total || 0).toFixed(2)}</p>
-            <p style="margin: 4px 0;"><strong>Status:</strong> ${invoice.status}</p>
-          </div>
-
-          ${paymentNotesHtml}
-
-          <p>Thank you.</p>
-        </div>
-      `;
+      // Generate the PDF in the browser and attach it so the client
+      // receives the actual document, not just a summary.
+      let pdfBase64 = "";
+      try {
+        const pdf = await generateInvoicePdf(invoice, businessProfile);
+        pdfBase64 = pdf.output("datauristring").split(",")[1] || "";
+      } catch (pdfError) {
+        console.error("PDF generation for email failed:", pdfError);
+      }
 
       const response = await fetch("/api/send-invoice", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
         },
-        body: JSON.stringify({
-          to: clientEmail,
-          subject: `Invoice ${invoice.invoiceNumber}`,
-          html: emailHtml,
-        }),
+        body: JSON.stringify({ invoiceId: invoice.id, kind, pdfBase64 }),
       });
 
       const result = await response.json();
@@ -268,11 +254,17 @@ export default function InvoiceDetailPage() {
         throw new Error(result.error || "Failed to send invoice");
       }
 
-      setMessage("Invoice sent successfully 🚀");
+      toast(
+        kind === "reminder"
+          ? "Payment reminder sent 🔔"
+          : "Invoice sent successfully 🚀",
+        "success"
+      );
     } catch (error) {
       console.error("Send invoice error:", error);
-      setMessage(
-        error instanceof Error ? error.message : "Failed to send invoice"
+      toast(
+        error instanceof Error ? error.message : "Failed to send invoice",
+        "error"
       );
     } finally {
       setIsSending(false);
@@ -280,7 +272,7 @@ export default function InvoiceDetailPage() {
   }
 
   function formatDisplayDate(dateString?: string) {
-    if (!dateString) return "";
+    if (!dateString) return "—";
 
     const [year, month, day] = dateString.split("-");
     if (!year || !month || !day) return dateString;
@@ -290,44 +282,35 @@ export default function InvoiceDetailPage() {
 
   if (isLoading) {
     return (
-      <div className="space-y-6">
-        <div className="overflow-hidden rounded-3xl border border-slate-200 bg-white shadow-sm">
-          <div className="bg-gradient-to-r from-slate-950 via-slate-900 to-blue-950 px-5 py-6 sm:px-6 lg:px-8">
-            <p className="text-xs font-semibold uppercase tracking-[0.25em] text-slate-300">
-              InvoiceFlow
-            </p>
-            <h1 className="mt-2 text-3xl font-bold tracking-tight text-white">
-              Invoice Details
-            </h1>
-            <p className="mt-2 text-sm text-slate-300">Loading invoice...</p>
-          </div>
+      <div className="mx-auto max-w-4xl space-y-6">
+        <div className="flex gap-3">
+          <Skeleton className="h-11 w-40" />
+          <Skeleton className="h-11 w-32" />
         </div>
+        <CardSkeleton lines={10} />
       </div>
     );
   }
 
   if (!invoice) {
     return (
-      <div className="space-y-6">
+      <div className="mx-auto max-w-4xl">
         <div className="overflow-hidden rounded-3xl border border-slate-200 bg-white shadow-sm">
           <div className="bg-gradient-to-r from-slate-950 via-slate-900 to-blue-950 px-5 py-6 sm:px-6 lg:px-8">
             <div className="flex flex-col gap-4">
               <Link
                 href="/invoices"
-                className="inline-flex w-fit items-center rounded-xl border border-white/15 bg-white/5 px-4 py-2.5 text-sm font-medium text-white transition hover:bg-white/10"
+                className="inline-flex w-fit items-center gap-2 rounded-xl border border-white/15 bg-white/5 px-4 py-2.5 text-sm font-medium text-white transition hover:bg-white/10"
               >
-                ← Back to Invoices
+                <ArrowLeft size={16} /> Back to Invoices
               </Link>
 
               <div>
-                <p className="text-xs font-semibold uppercase tracking-[0.25em] text-slate-300">
-                  InvoiceFlow
-                </p>
                 <h1 className="mt-2 text-3xl font-bold tracking-tight text-white">
                   Invoice Details
                 </h1>
                 <p className="mt-2 text-sm text-slate-300">
-                  {message || "Invoice not found."}
+                  {notFoundMessage || "Invoice not found."}
                 </p>
               </div>
             </div>
@@ -338,185 +321,236 @@ export default function InvoiceDetailPage() {
   }
 
   const displayStatus = getDisplayStatus(invoice);
-  const showPaidBadge = displayStatus === "Paid" && !!invoice.paymentDate;
+  const isOverdue = displayStatus === "Overdue";
+  const isPaid = displayStatus === "Paid";
+  const totals = calculateInvoiceTotals(
+    invoice.items,
+    invoice.taxRate || 0,
+    invoice.discount || 0
+  );
+  const hasBreakdown = totals.discountAmount > 0 || totals.taxAmount > 0;
+  const allFixed =
+    invoice.items.length > 0 &&
+    invoice.items.every((item) => getItemType(item) === "fixed");
+  const itemGridCols = allFixed
+    ? "grid-cols-[110px_minmax(0,1fr)_110px]"
+    : "grid-cols-[110px_minmax(0,1fr)_90px_110px_110px]";
 
   return (
-    <div className="space-y-6">
-      <div className="overflow-hidden rounded-3xl border border-slate-200 bg-white shadow-sm">
-        <div className="bg-gradient-to-r from-slate-950 via-slate-900 to-blue-950 px-5 py-6 sm:px-6 lg:px-8">
-          <div className="flex flex-col gap-5">
-            <div className="flex flex-wrap items-center gap-3">
-              <Link
-                href="/invoices"
-                className="inline-flex items-center rounded-xl border border-white/15 bg-white/5 px-4 py-2.5 text-sm font-medium text-white transition hover:bg-white/10"
-              >
-                ← Back to Invoices
-              </Link>
+    <div className="mx-auto max-w-4xl space-y-6">
+      {/* Action bar */}
+      <div className="flex flex-wrap items-center justify-between gap-3">
+        <Link
+          href="/invoices"
+          className="inline-flex items-center gap-2 rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-sm font-medium text-slate-700 shadow-sm transition hover:border-slate-300 hover:bg-slate-50"
+        >
+          <ArrowLeft size={16} /> Back to Invoices
+        </Link>
 
-              <Link
-                href={`/invoices/${id}/edit`}
-                className="inline-flex items-center rounded-xl bg-white px-4 py-2.5 text-sm font-semibold text-slate-950 transition hover:bg-slate-100"
-              >
-                Edit Invoice
-              </Link>
+        <div className="flex flex-wrap gap-2">
+          <Link
+            href={`/invoices/${id}/edit`}
+            className="inline-flex items-center gap-2 rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-sm font-semibold text-slate-800 shadow-sm transition hover:border-slate-300 hover:bg-slate-50"
+          >
+            <Pencil size={15} /> Edit
+          </Link>
 
-              <button
-                onClick={() => handleDownloadPDF(invoice)}
-                className="inline-flex items-center rounded-xl border border-white/15 bg-white/5 px-4 py-2.5 text-sm font-medium text-white transition hover:bg-white/10"
-              >
-                Download PDF
-              </button>
+          <button
+            onClick={() => handleDownloadPDF(invoice)}
+            className="inline-flex items-center gap-2 rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-sm font-semibold text-slate-800 shadow-sm transition hover:border-slate-300 hover:bg-slate-50"
+          >
+            <Download size={15} /> PDF
+          </button>
 
-              <button
-                onClick={handleSendInvoice}
-                disabled={isSending}
-                className="inline-flex items-center rounded-xl bg-emerald-500 px-4 py-2.5 text-sm font-semibold text-white transition hover:bg-emerald-600 disabled:cursor-not-allowed disabled:opacity-60"
-              >
-                {isSending ? "Sending..." : "Send Invoice"}
-              </button>
-            </div>
+          {isOverdue && (
+            <button
+              onClick={() => handleSendInvoice("reminder")}
+              disabled={isSending}
+              className="inline-flex items-center gap-2 rounded-xl bg-amber-500 px-4 py-2.5 text-sm font-semibold text-white shadow-sm transition hover:bg-amber-600 disabled:cursor-not-allowed disabled:opacity-60"
+            >
+              <BellRing size={15} />
+              {isSending ? "Sending..." : "Send Reminder"}
+            </button>
+          )}
 
-            <div className="flex flex-col gap-5 lg:flex-row lg:items-end lg:justify-between">
-              <div className="min-w-0">
-                <p className="text-xs font-semibold uppercase tracking-[0.25em] text-slate-300">
-                  InvoiceFlow
-                </p>
-                <h1 className="mt-2 text-3xl font-bold tracking-tight text-white">
-                  {invoice.invoiceNumber}
-                </h1>
-                <p className="mt-2 max-w-2xl text-sm text-slate-300">
-                  Review invoice details, payment status, client information, and
-                  line items in one place.
-                </p>
-              </div>
-
-              <div className="flex flex-wrap gap-2">
-                <span
-                  className={`inline-flex rounded-full px-3 py-1 text-xs font-semibold ${getStatusClasses(
-                    displayStatus
-                  )}`}
-                >
-                  {displayStatus}
-                </span>
-
-                {showPaidBadge && (
-                  <span className="inline-flex rounded-full border border-green-200 bg-green-50 px-3 py-1 text-xs font-semibold text-green-700">
-                    Paid on {formatDisplayDate(invoice.paymentDate)}
-                  </span>
-                )}
-              </div>
-            </div>
-          </div>
-        </div>
-
-        <div className="grid gap-4 border-t border-slate-200 bg-white px-5 py-5 sm:grid-cols-2 xl:grid-cols-4 sm:px-6 lg:px-8">
-          <div className="rounded-2xl border border-slate-200 bg-slate-50 p-5">
-            <p className="text-sm font-medium text-slate-500">Client</p>
-            <p className="mt-2 text-lg font-bold text-slate-950 break-words">
-              {invoice.clientName}
-            </p>
-          </div>
-
-          <div className="rounded-2xl border border-slate-200 bg-slate-50 p-5">
-            <p className="text-sm font-medium text-slate-500">Issue Date</p>
-            <p className="mt-2 text-lg font-bold text-slate-950">
-              {invoice.issueDate || "-"}
-            </p>
-          </div>
-
-          <div className="rounded-2xl border border-slate-200 bg-slate-50 p-5">
-            <p className="text-sm font-medium text-slate-500">Due Date</p>
-            <p className="mt-2 text-lg font-bold text-slate-950">
-              {invoice.dueDate || "-"}
-            </p>
-          </div>
-
-          <div className="rounded-2xl border border-slate-200 bg-slate-50 p-5">
-            <p className="text-sm font-medium text-slate-500">Total</p>
-            <p className="mt-2 text-3xl font-bold text-slate-950">
-              ${invoice.total.toFixed(2)}
-            </p>
-          </div>
+          <button
+            onClick={() => handleSendInvoice("invoice")}
+            disabled={isSending}
+            className="inline-flex items-center gap-2 rounded-xl bg-slate-950 px-4 py-2.5 text-sm font-semibold text-white shadow-sm transition hover:bg-slate-800 disabled:cursor-not-allowed disabled:opacity-60"
+          >
+            <Send size={15} />
+            {isSending ? "Sending..." : "Send Invoice"}
+          </button>
         </div>
       </div>
 
-      <div className="grid gap-6 xl:grid-cols-[minmax(0,1.25fr)_380px]">
-        <div className="space-y-6">
-          <div className="rounded-3xl border border-slate-200 bg-white p-6 shadow-sm">
-            <div className="flex flex-col gap-4 border-b border-slate-200 pb-6 sm:flex-row sm:items-start sm:justify-between">
-              <div className="min-w-0">
-                {businessProfile.logoUrl && (
-                  <img
-                    src={businessProfile.logoUrl}
-                    alt="Business Logo"
-                    className="mb-4 max-h-20 max-w-[220px] object-contain"
-                  />
-                )}
+      {/* The invoice document */}
+      <div className="relative overflow-hidden rounded-3xl border border-slate-200 bg-white shadow-sm">
+        {/* Top accent */}
+        <div className="h-2 bg-gradient-to-r from-slate-950 via-blue-800 to-blue-500" />
 
-                <h2 className="text-2xl font-bold text-slate-950">
-                  {businessProfile.businessName || "InvoiceFlow"}
-                </h2>
+        {isPaid && (
+          <div className="pointer-events-none absolute right-6 top-10 rotate-12 rounded-xl border-4 border-emerald-500/70 px-4 py-1.5 text-xl font-black uppercase tracking-widest text-emerald-500/70 sm:right-12 sm:top-14">
+            Paid
+          </div>
+        )}
 
-                <div className="mt-3 space-y-1 text-sm text-slate-600">
-                  {businessProfile.email && <p>{businessProfile.email}</p>}
-                  {businessProfile.phone && <p>{businessProfile.phone}</p>}
-                  {businessProfile.address && <p>{businessProfile.address}</p>}
+        {isOverdue && (
+          <div className="pointer-events-none absolute right-6 top-10 rotate-12 rounded-xl border-4 border-red-500/60 px-4 py-1.5 text-xl font-black uppercase tracking-widest text-red-500/60 sm:right-12 sm:top-14">
+            Overdue
+          </div>
+        )}
+
+        <div className="p-6 sm:p-10">
+          {/* Letterhead */}
+          <div className="flex flex-col gap-6 border-b border-slate-200 pb-8 sm:flex-row sm:items-start sm:justify-between">
+            <div className="min-w-0">
+              {businessProfile.logoUrl ? (
+                // eslint-disable-next-line @next/next/no-img-element
+                <img
+                  src={businessProfile.logoUrl}
+                  alt="Business Logo"
+                  className="mb-4 max-h-16 max-w-[200px] object-contain"
+                />
+              ) : (
+                <div className="mb-4 flex h-12 w-12 items-center justify-center rounded-2xl bg-slate-950">
+                  <span className="text-base font-bold text-white">
+                    {(businessProfile.businessName || "IF").slice(0, 2).toUpperCase()}
+                  </span>
                 </div>
-              </div>
+              )}
 
-              <div className="rounded-2xl border border-slate-200 bg-slate-50 p-4 sm:min-w-[220px]">
-                <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">
-                  Invoice Number
-                </p>
-                <p className="mt-2 text-lg font-bold text-slate-950">
-                  {invoice.invoiceNumber}
-                </p>
+              <h2 className="text-xl font-bold text-slate-950">
+                {businessProfile.businessName || "InvoiceFlow"}
+              </h2>
+
+              <div className="mt-2 space-y-0.5 text-sm text-slate-500">
+                {businessProfile.email && <p>{businessProfile.email}</p>}
+                {businessProfile.phone && <p>{businessProfile.phone}</p>}
+                {businessProfile.address && <p>{businessProfile.address}</p>}
               </div>
             </div>
 
-            <div className="mt-6">
-              <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">
-                Bill To
+            <div className="text-left sm:text-right">
+              <p className="text-3xl font-black uppercase tracking-tight text-slate-950 sm:text-4xl">
+                Invoice
               </p>
-              <p className="mt-2 text-2xl font-semibold text-slate-950">
+              <p className="mt-1 font-mono text-sm font-semibold text-slate-500">
+                {invoice.invoiceNumber}
+              </p>
+
+              <span
+                className={`mt-3 inline-flex rounded-full px-3 py-1 text-xs font-semibold ${getStatusClasses(
+                  displayStatus
+                )}`}
+              >
+                {displayStatus}
+              </span>
+            </div>
+          </div>
+
+          {/* Bill To + dates */}
+          <div className="grid gap-6 border-b border-slate-200 py-8 sm:grid-cols-2">
+            <div>
+              <p className="text-xs font-semibold uppercase tracking-widest text-slate-400">
+                Billed To
+              </p>
+              <p className="mt-2 text-xl font-semibold text-slate-950">
                 {invoice.clientName}
               </p>
               {invoice.clientEmail && (
-                <p className="mt-1 text-sm text-slate-600">{invoice.clientEmail}</p>
+                <p className="mt-1 text-sm text-slate-500">{invoice.clientEmail}</p>
+              )}
+            </div>
+
+            <div className="grid grid-cols-2 gap-4 sm:justify-items-end sm:text-right">
+              <div>
+                <p className="text-xs font-semibold uppercase tracking-widest text-slate-400">
+                  Issue Date
+                </p>
+                <p className="mt-1 text-sm font-semibold text-slate-900">
+                  {formatDisplayDate(invoice.issueDate)}
+                </p>
+              </div>
+
+              <div>
+                <p className="text-xs font-semibold uppercase tracking-widest text-slate-400">
+                  Due Date
+                </p>
+                <p
+                  className={`mt-1 text-sm font-semibold ${
+                    isOverdue ? "text-red-600" : "text-slate-900"
+                  }`}
+                >
+                  {formatDisplayDate(invoice.dueDate)}
+                </p>
+              </div>
+
+              {invoice.paymentMethod && (
+                <div>
+                  <p className="text-xs font-semibold uppercase tracking-widest text-slate-400">
+                    Payment Method
+                  </p>
+                  <p className="mt-1 text-sm font-semibold text-slate-900">
+                    {invoice.paymentMethod}
+                  </p>
+                </div>
+              )}
+
+              {invoice.paymentDate && (
+                <div>
+                  <p className="text-xs font-semibold uppercase tracking-widest text-slate-400">
+                    Paid On
+                  </p>
+                  <p className="mt-1 text-sm font-semibold text-emerald-600">
+                    {formatDisplayDate(invoice.paymentDate)}
+                  </p>
+                </div>
               )}
             </div>
           </div>
 
-          <div className="rounded-3xl border border-slate-200 bg-white shadow-sm">
-            <div className="border-b border-slate-200 px-5 py-4 sm:px-6">
-              <h2 className="text-xl font-semibold text-slate-950">Invoice Items</h2>
-              <p className="mt-1 text-sm text-slate-500">
-                Detailed breakdown of services, hours, and line totals.
-              </p>
+          {/* Items table */}
+          <div className="py-8">
+            <div
+              className={`hidden ${itemGridCols} gap-3 border-b border-slate-200 pb-3 text-xs font-semibold uppercase tracking-widest text-slate-400 md:grid`}
+            >
+              <p>Date</p>
+              <p>Description</p>
+              {!allFixed && <p className="text-right">Hours</p>}
+              {!allFixed && <p className="text-right">Rate</p>}
+              <p className="text-right">Amount</p>
             </div>
 
             <div className="hidden md:block">
-              <div className="grid grid-cols-5 bg-slate-50 px-6 py-4 text-sm font-semibold text-slate-700">
-                <p>Date</p>
-                <p>Description</p>
-                <p className="text-center">Hours</p>
-                <p className="text-center">Rate</p>
-                <p className="text-right">Amount</p>
-              </div>
-
               {invoice.items.map((item, index) => {
-                const amount =
-                  (Number(item.hours) || 0) * (Number(item.rate) || 0);
+                const isFixed = getItemType(item) === "fixed";
+                const amount = getItemAmount(item);
 
                 return (
                   <div
                     key={index}
-                    className="grid grid-cols-5 border-t border-slate-100 px-6 py-4 text-sm text-slate-700"
+                    className={`grid ${itemGridCols} gap-3 border-b border-slate-100 py-4 text-sm text-slate-700`}
                   >
-                    <p>{item.date || "-"}</p>
-                    <p className="break-words">{item.description}</p>
-                    <p className="text-center">{item.hours}</p>
-                    <p className="text-center">${Number(item.rate).toFixed(2)}</p>
+                    <p className="text-slate-500">
+                      {item.date ? formatDisplayDate(item.date) : "—"}
+                    </p>
+                    <p className="whitespace-pre-line break-words font-medium text-slate-900">
+                      {item.description}
+                      {isFixed && !allFixed && (
+                        <span className="ml-2 rounded-md bg-slate-100 px-1.5 py-0.5 text-[11px] font-semibold uppercase tracking-wide text-slate-500">
+                          Flat fee
+                        </span>
+                      )}
+                    </p>
+                    {!allFixed && (
+                      <p className="text-right">{isFixed ? "—" : item.hours}</p>
+                    )}
+                    {!allFixed && (
+                      <p className="text-right">
+                        {isFixed ? "—" : `$${Number(item.rate).toFixed(2)}`}
+                      </p>
+                    )}
                     <p className="text-right font-semibold text-slate-950">
                       ${amount.toFixed(2)}
                     </p>
@@ -525,170 +559,90 @@ export default function InvoiceDetailPage() {
               })}
             </div>
 
-            <div className="space-y-4 p-4 md:hidden">
+            {/* Mobile items */}
+            <div className="space-y-3 md:hidden">
               {invoice.items.map((item, index) => {
-                const amount =
-                  (Number(item.hours) || 0) * (Number(item.rate) || 0);
+                const isFixed = getItemType(item) === "fixed";
+                const amount = getItemAmount(item);
 
                 return (
                   <div
                     key={index}
                     className="rounded-2xl border border-slate-200 bg-slate-50 p-4"
                   >
-                    <div className="grid gap-3 sm:grid-cols-2">
-                      <div>
-                        <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">
-                          Date
-                        </p>
-                        <p className="mt-1 text-sm text-slate-900">
-                          {item.date || "-"}
-                        </p>
-                      </div>
-
-                      <div>
-                        <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">
-                          Description
-                        </p>
-                        <p className="mt-1 text-sm text-slate-900">
-                          {item.description}
-                        </p>
-                      </div>
-
-                      <div>
-                        <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">
-                          Hours
-                        </p>
-                        <p className="mt-1 text-sm text-slate-900">
-                          {item.hours}
-                        </p>
-                      </div>
-
-                      <div>
-                        <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">
-                          Rate
-                        </p>
-                        <p className="mt-1 text-sm text-slate-900">
-                          ${Number(item.rate).toFixed(2)}
-                        </p>
-                      </div>
-
-                      <div className="sm:col-span-2">
-                        <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">
-                          Amount
-                        </p>
-                        <p className="mt-1 text-base font-semibold text-slate-950">
-                          ${amount.toFixed(2)}
-                        </p>
-                      </div>
+                    <div className="flex items-start justify-between gap-3">
+                      <p className="min-w-0 break-words text-sm font-medium text-slate-900">
+                        {item.description}
+                      </p>
+                      <p className="shrink-0 text-sm font-bold text-slate-950">
+                        ${amount.toFixed(2)}
+                      </p>
                     </div>
+
+                    <p className="mt-2 text-xs text-slate-500">
+                      {item.date ? formatDisplayDate(item.date) : "—"}
+                      {isFixed
+                        ? " · Flat fee"
+                        : ` · ${item.hours}h × $${Number(item.rate).toFixed(2)}`}
+                    </p>
                   </div>
                 );
               })}
             </div>
+
+            {/* Totals */}
+            <div className="mt-6 flex justify-end">
+              <div className="w-full max-w-xs space-y-2 text-sm">
+                {hasBreakdown && (
+                  <>
+                    <div className="flex justify-between text-slate-600">
+                      <span>Subtotal</span>
+                      <span>${totals.subtotal.toFixed(2)}</span>
+                    </div>
+
+                    {totals.discountAmount > 0 && (
+                      <div className="flex justify-between text-emerald-600">
+                        <span>Discount</span>
+                        <span>−${totals.discountAmount.toFixed(2)}</span>
+                      </div>
+                    )}
+
+                    {totals.taxAmount > 0 && (
+                      <div className="flex justify-between text-slate-600">
+                        <span>Tax ({invoice.taxRate}%)</span>
+                        <span>${totals.taxAmount.toFixed(2)}</span>
+                      </div>
+                    )}
+                  </>
+                )}
+
+                <div className="flex items-center justify-between rounded-2xl bg-slate-950 px-5 py-4 text-white">
+                  <span className="text-sm font-medium text-slate-300">
+                    Total Due
+                  </span>
+                  <span className="text-2xl font-bold">
+                    ${invoice.total.toFixed(2)}
+                  </span>
+                </div>
+              </div>
+            </div>
           </div>
 
+          {/* Payment notes */}
           {invoice.paymentNotes && (
-            <div className="rounded-3xl border border-slate-200 bg-white p-6 shadow-sm">
-              <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">
+            <div className="rounded-2xl border border-slate-200 bg-slate-50 p-5">
+              <p className="text-xs font-semibold uppercase tracking-widest text-slate-400">
                 Payment Notes
               </p>
-              <p className="mt-3 whitespace-pre-line text-sm leading-6 text-slate-800">
+              <p className="mt-2 whitespace-pre-line text-sm leading-6 text-slate-700">
                 {invoice.paymentNotes}
               </p>
             </div>
           )}
 
-          {message && (
-            <div className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
-              <p className="text-sm text-slate-700">{message}</p>
-            </div>
-          )}
-        </div>
-
-        <div className="space-y-6">
-          <div className="rounded-3xl border border-slate-200 bg-white p-6 shadow-sm">
-            <h2 className="text-xl font-semibold text-slate-950">Invoice Summary</h2>
-
-            <div className="mt-5 space-y-4">
-              <div className="flex items-center justify-between gap-4">
-                <span className="text-sm text-slate-500">Status</span>
-                <span
-                  className={`inline-flex rounded-full px-3 py-1 text-xs font-semibold ${getStatusClasses(
-                    displayStatus
-                  )}`}
-                >
-                  {displayStatus}
-                </span>
-              </div>
-
-              <div className="flex items-center justify-between gap-4">
-                <span className="text-sm text-slate-500">Issue Date</span>
-                <span className="text-sm font-medium text-slate-900">
-                  {invoice.issueDate || "-"}
-                </span>
-              </div>
-
-              <div className="flex items-center justify-between gap-4">
-                <span className="text-sm text-slate-500">Due Date</span>
-                <span className="text-sm font-medium text-slate-900">
-                  {invoice.dueDate || "-"}
-                </span>
-              </div>
-
-              <div className="flex items-center justify-between gap-4">
-                <span className="text-sm text-slate-500">Payment Method</span>
-                <span className="text-sm font-medium text-slate-900">
-                  {invoice.paymentMethod || "-"}
-                </span>
-              </div>
-
-              <div className="flex items-center justify-between gap-4">
-                <span className="text-sm text-slate-500">Payment Date</span>
-                <span className="text-sm font-medium text-slate-900">
-                  {invoice.paymentDate
-                    ? formatDisplayDate(invoice.paymentDate)
-                    : "-"}
-                </span>
-              </div>
-
-              <div className="rounded-2xl bg-slate-50 p-4">
-                <div className="flex items-center justify-between text-lg font-bold text-slate-950">
-                  <span>Total</span>
-                  <span>${invoice.total.toFixed(2)}</span>
-                </div>
-              </div>
-            </div>
-          </div>
-
-          {(invoice.paymentMethod || invoice.paymentDate) && (
-            <div className="rounded-3xl border border-slate-200 bg-white p-6 shadow-sm">
-              <h2 className="text-xl font-semibold text-slate-950">
-                Payment Summary
-              </h2>
-
-              <div className="mt-5 grid gap-4">
-                <div className="rounded-2xl bg-slate-50 p-4">
-                  <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">
-                    Method
-                  </p>
-                  <p className="mt-2 text-sm text-slate-900">
-                    {invoice.paymentMethod || "-"}
-                  </p>
-                </div>
-
-                <div className="rounded-2xl bg-slate-50 p-4">
-                  <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">
-                    Paid On
-                  </p>
-                  <p className="mt-2 text-sm text-slate-900">
-                    {invoice.paymentDate
-                      ? formatDisplayDate(invoice.paymentDate)
-                      : "-"}
-                  </p>
-                </div>
-              </div>
-            </div>
-          )}
+          <p className="mt-8 text-center text-sm text-slate-400">
+            Thank you for your business.
+          </p>
         </div>
       </div>
     </div>

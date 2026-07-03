@@ -2,6 +2,10 @@
 
 import { createClient } from "@/lib/supabase/client";
 import { useEffect, useMemo, useState } from "react";
+import { useToast } from "@/components/ui/Toast";
+import { CardSkeleton } from "@/components/ui/Skeleton";
+
+type InvoiceFormat = "hourly" | "fixed";
 
 type BusinessProfile = {
   id?: string;
@@ -10,6 +14,7 @@ type BusinessProfile = {
   phone: string;
   address: string;
   logoUrl?: string;
+  defaultItemType: InvoiceFormat;
 };
 
 type DatabaseBusinessProfile = {
@@ -20,10 +25,12 @@ type DatabaseBusinessProfile = {
   phone: string | null;
   address: string | null;
   logo_url: string | null;
+  default_item_type: string | null;
 };
 
 export default function SettingsPage() {
   const supabase = useMemo(() => createClient(), []);
+  const { toast } = useToast();
 
   const [businessProfile, setBusinessProfile] = useState<BusinessProfile>({
     businessName: "",
@@ -31,11 +38,10 @@ export default function SettingsPage() {
     phone: "",
     address: "",
     logoUrl: "",
+    defaultItemType: "hourly",
   });
 
   const [logoFile, setLogoFile] = useState<File | null>(null);
-  const [logoPreviewUrl, setLogoPreviewUrl] = useState("");
-  const [message, setMessage] = useState("");
   const [isSaving, setIsSaving] = useState(false);
   const [isUploadingLogo, setIsUploadingLogo] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
@@ -43,7 +49,7 @@ export default function SettingsPage() {
   useEffect(() => {
     async function loadBusinessProfile() {
       setIsLoading(true);
-      setMessage("");
+      
 
       const {
         data: { user },
@@ -64,7 +70,7 @@ export default function SettingsPage() {
 
       if (error) {
         console.error("Load business profile error:", error);
-        setMessage(error.message || "Could not load business profile.");
+        toast(error.message || "Could not load business profile.", "error");
         setIsLoading(false);
         return;
       }
@@ -79,6 +85,8 @@ export default function SettingsPage() {
           phone: profile.phone || "",
           address: profile.address || "",
           logoUrl: profile.logo_url || "",
+          defaultItemType:
+            profile.default_item_type === "fixed" ? "fixed" : "hourly",
         });
       }
 
@@ -88,23 +96,20 @@ export default function SettingsPage() {
     loadBusinessProfile();
   }, [supabase]);
 
+  const logoPreviewUrl = useMemo(
+    () => (logoFile ? URL.createObjectURL(logoFile) : ""),
+    [logoFile]
+  );
+
   useEffect(() => {
-    if (!logoFile) {
-      setLogoPreviewUrl("");
-      return;
-    }
-
-    const objectUrl = URL.createObjectURL(logoFile);
-    setLogoPreviewUrl(objectUrl);
-
     return () => {
-      URL.revokeObjectURL(objectUrl);
+      if (logoPreviewUrl) URL.revokeObjectURL(logoPreviewUrl);
     };
-  }, [logoFile]);
+  }, [logoPreviewUrl]);
 
   async function handleSaveProfile() {
     setIsSaving(true);
-    setMessage("");
+    
 
     const {
       data: { user },
@@ -113,7 +118,7 @@ export default function SettingsPage() {
 
     if (userError || !user) {
       console.error("Save user error:", userError);
-      setMessage("User not authenticated.");
+      toast("User not authenticated.", "error");
       setIsSaving(false);
       return;
     }
@@ -136,7 +141,7 @@ export default function SettingsPage() {
 
       if (uploadError) {
         console.error("Logo upload error:", uploadError);
-        setMessage(uploadError.message || "Error uploading logo.");
+        toast(uploadError.message || "Error uploading logo.", "error");
         setIsSaving(false);
         return;
       }
@@ -159,13 +164,14 @@ export default function SettingsPage() {
           phone: businessProfile.phone,
           address: businessProfile.address,
           logo_url: logoUrl,
+          default_item_type: businessProfile.defaultItemType,
         })
         .eq("id", businessProfile.id)
         .eq("user_id", user.id);
 
       if (error) {
         console.error("Update business profile error:", error);
-        setMessage(error.message || "Could not update profile.");
+        toast(error.message || "Could not update profile.", "error");
         setIsSaving(false);
         return;
       }
@@ -176,8 +182,8 @@ export default function SettingsPage() {
       }));
 
       setLogoFile(null);
-      setLogoPreviewUrl("");
-      setMessage("Business profile updated.");
+
+      toast("Business profile updated.", "success");
       setIsSaving(false);
       return;
     }
@@ -192,6 +198,7 @@ export default function SettingsPage() {
           phone: businessProfile.phone,
           address: businessProfile.address,
           logo_url: logoUrl,
+          default_item_type: businessProfile.defaultItemType,
         },
       ])
       .select("id")
@@ -199,7 +206,7 @@ export default function SettingsPage() {
 
     if (error) {
       console.error("Insert business profile error:", error);
-      setMessage(error.message || "Could not save profile.");
+      toast(error.message || "Could not save profile.", "error");
       setIsSaving(false);
       return;
     }
@@ -211,8 +218,8 @@ export default function SettingsPage() {
     }));
 
     setLogoFile(null);
-    setLogoPreviewUrl("");
-    setMessage("Business profile saved.");
+
+    toast("Business profile saved.", "success");
     setIsSaving(false);
   }
 
@@ -289,7 +296,7 @@ export default function SettingsPage() {
       <div className="grid gap-6 xl:grid-cols-[minmax(0,1.2fr)_380px]">
         <div className="rounded-3xl border border-slate-200 bg-white p-6 shadow-sm">
           {isLoading ? (
-            <p className="text-slate-600">Loading...</p>
+            <CardSkeleton lines={6} />
           ) : (
             <>
               <div className="mb-6">
@@ -372,6 +379,65 @@ export default function SettingsPage() {
                 </div>
               </div>
 
+              <div className="mt-8">
+                <label className="mb-2 block text-sm font-semibold text-slate-800">
+                  Invoice Format
+                </label>
+                <p className="mb-4 text-sm text-slate-500">
+                  Choose how new invoice line items are billed by default. You
+                  can still switch any individual item while creating an
+                  invoice.
+                </p>
+
+                <div className="grid gap-4 sm:grid-cols-2">
+                  <button
+                    type="button"
+                    onClick={() =>
+                      setBusinessProfile((prev) => ({
+                        ...prev,
+                        defaultItemType: "hourly",
+                      }))
+                    }
+                    className={`rounded-2xl border p-5 text-left transition ${
+                      businessProfile.defaultItemType === "hourly"
+                        ? "border-blue-500 bg-blue-50 ring-4 ring-blue-100"
+                        : "border-slate-200 bg-white hover:border-slate-300"
+                    }`}
+                  >
+                    <p className="font-semibold text-slate-950">
+                      Hourly billing
+                    </p>
+                    <p className="mt-1 text-sm text-slate-600">
+                      Items track a date, hours worked, and an hourly rate.
+                      Best for time-based work.
+                    </p>
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={() =>
+                      setBusinessProfile((prev) => ({
+                        ...prev,
+                        defaultItemType: "fixed",
+                      }))
+                    }
+                    className={`rounded-2xl border p-5 text-left transition ${
+                      businessProfile.defaultItemType === "fixed"
+                        ? "border-blue-500 bg-blue-50 ring-4 ring-blue-100"
+                        : "border-slate-200 bg-white hover:border-slate-300"
+                    }`}
+                  >
+                    <p className="font-semibold text-slate-950">
+                      Flat rate per item
+                    </p>
+                    <p className="mt-1 text-sm text-slate-600">
+                      Items have a description and a fixed price. Best for
+                      products, packages, and project pricing.
+                    </p>
+                  </button>
+                </div>
+              </div>
+
               <div className="mt-8 rounded-2xl border border-slate-200 bg-slate-50 p-5">
                 <label className="mb-2 block text-sm font-semibold text-slate-800">
                   Business Logo
@@ -391,7 +457,7 @@ export default function SettingsPage() {
                     onChange={(e) => {
                       if (e.target.files && e.target.files[0]) {
                         setLogoFile(e.target.files[0]);
-                        setMessage("");
+                        
                       }
                     }}
                   />
@@ -434,11 +500,6 @@ export default function SettingsPage() {
             </>
           )}
 
-          {message && (
-            <div className="mt-6 rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3">
-              <p className="text-sm text-slate-700">{message}</p>
-            </div>
-          )}
         </div>
 
         <div className="space-y-6">

@@ -4,7 +4,17 @@ import { createClient } from "@/lib/supabase/client";
 import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import { useParams, useRouter } from "next/navigation";
-import { InvoiceItem, InvoiceStatus } from "@/lib/invoice-utils";
+import {
+  InvoiceItem,
+  InvoiceItemType,
+  InvoiceStatus,
+  calculateInvoiceTotals,
+  getItemType,
+  isItemComplete,
+  sortItemsByDate,
+} from "@/lib/invoice-utils";
+import { useToast } from "@/components/ui/Toast";
+import DescriptionField from "@/components/ui/DescriptionField";
 
 type SavedClient = {
   id: string;
@@ -29,6 +39,8 @@ type DatabaseInvoiceRow = {
   payment_notes: string | null;
   payment_method: string | null;
   payment_date: string | null;
+  tax_rate: number | string | null;
+  discount: number | string | null;
 };
 
 type DatabaseClientRow = {
@@ -45,6 +57,7 @@ export default function EditInvoicePage() {
   const supabase = useMemo(() => createClient(), []);
   const params = useParams();
   const router = useRouter();
+  const { toast } = useToast();
   const id = params.id as string;
 
   const [clientName, setClientName] = useState("");
@@ -57,8 +70,10 @@ export default function EditInvoicePage() {
   const [paymentNotes, setPaymentNotes] = useState("");
   const [paymentMethod, setPaymentMethod] = useState("");
   const [paymentDate, setPaymentDate] = useState("");
+  const [taxRate, setTaxRate] = useState("");
+  const [discount, setDiscount] = useState("");
   const [items, setItems] = useState<InvoiceItem[]>([
-    { date: "", description: "", hours: "", rate: "" },
+    { date: "", description: "", hours: "", rate: "", type: "hourly", amount: "" },
   ]);
   const [message, setMessage] = useState("");
   const [isLoading, setIsLoading] = useState(true);
@@ -141,6 +156,8 @@ export default function EditInvoicePage() {
       setPaymentNotes(invoice.payment_notes || "");
       setPaymentMethod(invoice.payment_method || "");
       setPaymentDate(invoice.payment_date || "");
+      setTaxRate(Number(invoice.tax_rate) ? String(invoice.tax_rate) : "");
+      setDiscount(Number(invoice.discount) ? String(invoice.discount) : "");
 
       setItems(
         Array.isArray(invoice.items) && invoice.items.length > 0
@@ -149,17 +166,26 @@ export default function EditInvoicePage() {
               description: item.description ?? "",
               hours: item.hours ?? "",
               rate: item.rate ?? "",
+              type: getItemType(item),
+              amount: item.amount ?? "",
             }))
-          : [{ date: "", description: "", hours: "", rate: "" }]
+          : [{ date: "", description: "", hours: "", rate: "", type: "hourly" as const, amount: "" }]
       );
 
       setIsLoading(false);
     }
 
     async function loadClients() {
+      const {
+        data: { user },
+      } = await supabase.auth.getUser();
+
+      if (!user) return;
+
       const { data, error } = await supabase
         .from("clients")
         .select("*")
+        .eq("user_id", user.id)
         .order("created_at", { ascending: false });
 
       if (error) {
@@ -178,13 +204,13 @@ export default function EditInvoicePage() {
     loadClients();
   }, [id, supabase]);
 
-  const total = useMemo(() => {
-    return items.reduce((sum, item) => {
-      const hours = Number(item.hours) || 0;
-      const rate = Number(item.rate) || 0;
-      return sum + hours * rate;
-    }, 0);
-  }, [items]);
+  const totals = useMemo(
+    () =>
+      calculateInvoiceTotals(items, Number(taxRate) || 0, Number(discount) || 0),
+    [items, taxRate, discount]
+  );
+
+  const total = totals.total;
 
   function handleClientSelect(value: string) {
     setSelectedClient(value);
@@ -249,15 +275,24 @@ export default function EditInvoicePage() {
     const previousRate = items.length > 0 ? items[items.length - 1].rate : "";
     const autoRate = selected ? String(selected.rate) : previousRate;
 
+    const inheritedType =
+      items.length > 0 ? getItemType(items[items.length - 1]) : "hourly";
+
     setItems((prev) => [
       ...prev,
-      { date: "", description: "", hours: "", rate: autoRate },
+      { date: "", description: "", hours: "", rate: autoRate, type: inheritedType, amount: "" },
     ]);
+  }
+
+  function handleItemTypeChange(index: number, type: InvoiceItemType) {
+    setItems((prev) =>
+      prev.map((item, i) => (i === index ? { ...item, type } : item))
+    );
   }
 
   function handleRemoveItem(index: number) {
     if (items.length === 1) {
-      setMessage("At least one invoice item is required.");
+      toast("At least one invoice item is required.", "error");
       return;
     }
 
@@ -265,14 +300,12 @@ export default function EditInvoicePage() {
   }
 
   async function handleUpdateInvoice() {
-    const hasInvalidItem = items.some(
-      (item) => !item.description || !item.hours || !item.rate
-    );
+    const hasInvalidItem = items.some((item) => !isItemComplete(item));
 
     const finalStatus: InvoiceStatus = paymentDate ? "Paid" : status;
 
     if (!clientName || !invoiceNumber || hasInvalidItem) {
-      setMessage("Please complete all fields.");
+      toast("Please complete all fields.", "error");
       return;
     }
 
@@ -283,7 +316,7 @@ export default function EditInvoicePage() {
 
     if (userError || !user) {
       console.error("User error:", userError);
-      setMessage("You must be logged in.");
+      toast("You must be logged in.", "error");
       return;
     }
 
@@ -295,10 +328,12 @@ export default function EditInvoicePage() {
         issue_date: issueDate || null,
         due_date: dueDate || null,
         status: finalStatus,
-        items,
+        items: sortItemsByDate(items),
         payment_notes: paymentNotes || null,
         payment_method: paymentMethod || null,
         payment_date: paymentDate || null,
+        tax_rate: Number(taxRate) || 0,
+        discount: Number(discount) || 0,
         total,
       })
       .eq("id", id)
@@ -306,11 +341,11 @@ export default function EditInvoicePage() {
 
     if (error) {
       console.error("Update invoice error:", error);
-      setMessage(error.message || "Error updating invoice.");
+      toast(error.message || "Error updating invoice.", "error");
       return;
     }
 
-    setMessage("Invoice updated successfully.");
+    toast("Invoice updated successfully.", "success");
 
     setTimeout(() => {
       router.push(`/invoices/${id}`);
@@ -500,6 +535,36 @@ export default function EditInvoicePage() {
                             className="w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-slate-900 shadow-sm outline-none transition focus:border-blue-500 focus:ring-4 focus:ring-blue-100"
                           />
                         </div>
+
+                        <div>
+                          <label className="mb-2 block text-sm font-medium text-slate-700">
+                            Tax Rate (%)
+                          </label>
+                          <input
+                            type="number"
+                            min="0"
+                            step="0.01"
+                            placeholder="0"
+                            value={taxRate}
+                            onChange={(e) => setTaxRate(e.target.value)}
+                            className="w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-slate-900 shadow-sm outline-none transition placeholder:text-slate-400 focus:border-blue-500 focus:ring-4 focus:ring-blue-100"
+                          />
+                        </div>
+
+                        <div>
+                          <label className="mb-2 block text-sm font-medium text-slate-700">
+                            Discount ($)
+                          </label>
+                          <input
+                            type="number"
+                            min="0"
+                            step="0.01"
+                            placeholder="0"
+                            value={discount}
+                            onChange={(e) => setDiscount(e.target.value)}
+                            className="w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-slate-900 shadow-sm outline-none transition placeholder:text-slate-400 focus:border-blue-500 focus:ring-4 focus:ring-blue-100"
+                          />
+                        </div>
                       </div>
 
                       <div className="mt-5">
@@ -538,9 +603,12 @@ export default function EditInvoicePage() {
 
                       <div className="space-y-4">
                         {items.map((item, index) => {
+                          const itemType = getItemType(item);
                           const amount =
-                            (Number(item.hours) || 0) *
-                            (Number(item.rate) || 0);
+                            itemType === "fixed"
+                              ? Number(item.amount) || 0
+                              : (Number(item.hours) || 0) *
+                                (Number(item.rate) || 0);
 
                           return (
                             <div
@@ -560,7 +628,26 @@ export default function EditInvoicePage() {
                                 </button>
                               </div>
 
-                              <div className="grid gap-4 xl:grid-cols-[minmax(190px,1.15fr)_minmax(0,2.4fr)_minmax(110px,0.75fr)_minmax(130px,0.9fr)_minmax(150px,1fr)]">
+                              <div className="grid gap-4 xl:grid-cols-[minmax(120px,0.8fr)_minmax(150px,1fr)_minmax(0,2.2fr)_minmax(110px,0.75fr)_minmax(120px,0.85fr)_minmax(140px,0.95fr)]">
+                                <div className="min-w-0">
+                                  <label className="mb-2 block text-sm font-medium text-slate-700">
+                                    Type
+                                  </label>
+                                  <select
+                                    value={itemType}
+                                    onChange={(e) =>
+                                      handleItemTypeChange(
+                                        index,
+                                        e.target.value as InvoiceItemType
+                                      )
+                                    }
+                                    className="w-full min-w-0 rounded-2xl border border-slate-200 bg-white px-4 py-3 text-slate-900 shadow-sm outline-none transition focus:border-blue-500 focus:ring-4 focus:ring-blue-100"
+                                  >
+                                    <option value="hourly">Hourly</option>
+                                    <option value="fixed">Flat Fee</option>
+                                  </select>
+                                </div>
+
                                 <div className="min-w-0">
                                   <label className="mb-2 block text-sm font-medium text-slate-700">
                                     Date
@@ -583,55 +670,77 @@ export default function EditInvoicePage() {
                                   <label className="mb-2 block text-sm font-medium text-slate-700">
                                     Description
                                   </label>
-                                  <input
-                                    type="text"
+                                  <DescriptionField
                                     value={item.description}
-                                    onChange={(e) =>
+                                    onChange={(value) =>
                                       handleItemChange(
                                         index,
                                         "description",
-                                        e.target.value
+                                        value
                                       )
                                     }
-                                    className="w-full min-w-0 rounded-2xl border border-slate-200 bg-white px-4 py-3 text-slate-900 shadow-sm outline-none transition focus:border-blue-500 focus:ring-4 focus:ring-blue-100"
                                   />
                                 </div>
 
-                                <div className="min-w-0">
-                                  <label className="mb-2 block text-sm font-medium text-slate-700">
-                                    Hours
-                                  </label>
-                                  <input
-                                    type="number"
-                                    value={item.hours}
-                                    onChange={(e) =>
-                                      handleItemChange(
-                                        index,
-                                        "hours",
-                                        e.target.value
-                                      )
-                                    }
-                                    className="w-full min-w-0 rounded-2xl border border-slate-200 bg-white px-4 py-3 text-slate-900 shadow-sm outline-none transition focus:border-blue-500 focus:ring-4 focus:ring-blue-100"
-                                  />
-                                </div>
+                                {itemType === "fixed" ? (
+                                  <div className="min-w-0 xl:col-span-2">
+                                    <label className="mb-2 block text-sm font-medium text-slate-700">
+                                      Flat Amount ($)
+                                    </label>
+                                    <input
+                                      type="number"
+                                      min="0"
+                                      step="0.01"
+                                      value={item.amount || ""}
+                                      onChange={(e) =>
+                                        handleItemChange(
+                                          index,
+                                          "amount",
+                                          e.target.value
+                                        )
+                                      }
+                                      className="w-full min-w-0 rounded-2xl border border-slate-200 bg-white px-4 py-3 text-slate-900 shadow-sm outline-none transition focus:border-blue-500 focus:ring-4 focus:ring-blue-100"
+                                    />
+                                  </div>
+                                ) : (
+                                  <>
+                                    <div className="min-w-0">
+                                      <label className="mb-2 block text-sm font-medium text-slate-700">
+                                        Hours
+                                      </label>
+                                      <input
+                                        type="number"
+                                        value={item.hours}
+                                        onChange={(e) =>
+                                          handleItemChange(
+                                            index,
+                                            "hours",
+                                            e.target.value
+                                          )
+                                        }
+                                        className="w-full min-w-0 rounded-2xl border border-slate-200 bg-white px-4 py-3 text-slate-900 shadow-sm outline-none transition focus:border-blue-500 focus:ring-4 focus:ring-blue-100"
+                                      />
+                                    </div>
 
-                                <div className="min-w-0">
-                                  <label className="mb-2 block text-sm font-medium text-slate-700">
-                                    Rate
-                                  </label>
-                                  <input
-                                    type="number"
-                                    value={item.rate}
-                                    onChange={(e) =>
-                                      handleItemChange(
-                                        index,
-                                        "rate",
-                                        e.target.value
-                                      )
-                                    }
-                                    className="w-full min-w-0 rounded-2xl border border-slate-200 bg-white px-4 py-3 text-slate-900 shadow-sm outline-none transition focus:border-blue-500 focus:ring-4 focus:ring-blue-100"
-                                  />
-                                </div>
+                                    <div className="min-w-0">
+                                      <label className="mb-2 block text-sm font-medium text-slate-700">
+                                        Rate
+                                      </label>
+                                      <input
+                                        type="number"
+                                        value={item.rate}
+                                        onChange={(e) =>
+                                          handleItemChange(
+                                            index,
+                                            "rate",
+                                            e.target.value
+                                          )
+                                        }
+                                        className="w-full min-w-0 rounded-2xl border border-slate-200 bg-white px-4 py-3 text-slate-900 shadow-sm outline-none transition focus:border-blue-500 focus:ring-4 focus:ring-blue-100"
+                                      />
+                                    </div>
+                                  </>
+                                )}
 
                                 <div className="min-w-0">
                                   <label className="mb-2 block text-sm font-medium text-slate-700">
@@ -683,7 +792,29 @@ export default function EditInvoicePage() {
                           <p className="text-xs font-medium uppercase tracking-wide text-slate-500">
                             Total
                           </p>
-                          <p className="mt-2 text-3xl font-semibold tracking-tight text-slate-900">
+
+                          <div className="mt-2 space-y-1 text-sm text-slate-600">
+                            <div className="flex justify-between">
+                              <span>Subtotal</span>
+                              <span>${totals.subtotal.toFixed(2)}</span>
+                            </div>
+
+                            {totals.discountAmount > 0 && (
+                              <div className="flex justify-between text-emerald-600">
+                                <span>Discount</span>
+                                <span>−${totals.discountAmount.toFixed(2)}</span>
+                              </div>
+                            )}
+
+                            {totals.taxAmount > 0 && (
+                              <div className="flex justify-between">
+                                <span>Tax ({Number(taxRate) || 0}%)</span>
+                                <span>${totals.taxAmount.toFixed(2)}</span>
+                              </div>
+                            )}
+                          </div>
+
+                          <p className="mt-2 border-t border-slate-200 pt-2 text-3xl font-semibold tracking-tight text-slate-900">
                             ${total.toFixed(2)}
                           </p>
                         </div>

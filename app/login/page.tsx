@@ -34,51 +34,26 @@ export default function LoginPage() {
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center px-6 bg-[radial-gradient(circle_at_top,_#0f172a_0%,_#020617_60%,_#020617_100%)]">
-      <div
-        style={{
-          width: "100%",
-          maxWidth: "430px",
-          background: "#ffffff",
-          borderRadius: "20px",
-          padding: "36px",
-          boxShadow: "0 20px 50px rgba(0,0,0,0.25)",
-        }}
-      >
-        <div style={{ marginBottom: "28px", textAlign: "center" }}>
-          <h1
-            style={{
-              margin: 0,
-              fontSize: "32px",
-              fontWeight: 700,
-              color: "#0f172a",
-            }}
-          >
+    <div className="flex min-h-screen items-center justify-center bg-[radial-gradient(circle_at_top,_#0f172a_0%,_#020617_60%,_#020617_100%)] px-6">
+      <div className="w-full max-w-[430px] rounded-3xl bg-white p-9 shadow-[0_20px_50px_rgba(0,0,0,0.25)]">
+        <div className="mb-7 text-center">
+          <div className="mx-auto mb-4 flex h-14 w-14 items-center justify-center rounded-2xl bg-slate-950">
+            <span className="text-lg font-bold text-white">IF</span>
+          </div>
+
+          <h1 className="text-3xl font-bold tracking-tight text-slate-950">
             InvoiceFlow
           </h1>
-          <p
-            style={{
-              marginTop: "10px",
-              marginBottom: 0,
-              color: "#64748b",
-              fontSize: "15px",
-            }}
-          >
+          <p className="mt-2 text-[15px] text-slate-500">
             Sign in to manage invoices, clients, and settings.
           </p>
         </div>
 
         <form onSubmit={handleLogin}>
-          <div style={{ marginBottom: "16px" }}>
+          <div className="mb-4">
             <label
               htmlFor="email"
-              style={{
-                display: "block",
-                marginBottom: "8px",
-                fontSize: "14px",
-                fontWeight: 600,
-                color: "#334155",
-              }}
+              className="mb-2 block text-sm font-semibold text-slate-700"
             >
               Email
             </label>
@@ -89,30 +64,14 @@ export default function LoginPage() {
               value={email}
               onChange={(e) => setEmail(e.target.value)}
               required
-              style={{
-                width: "100%",
-                padding: "14px 16px",
-                borderRadius: "12px",
-                border: "1px solid #cbd5e1",
-                fontSize: "15px",
-                color: "#0f172a",
-                background: "#ffffff",
-                outline: "none",
-                boxSizing: "border-box",
-              }}
+              className="w-full rounded-2xl border border-slate-300 bg-white px-4 py-3.5 text-[15px] text-slate-950 outline-none transition placeholder:text-slate-400 focus:border-blue-500 focus:ring-4 focus:ring-blue-100"
             />
           </div>
 
-          <div style={{ marginBottom: "20px" }}>
+          <div className="mb-5">
             <label
               htmlFor="password"
-              style={{
-                display: "block",
-                marginBottom: "8px",
-                fontSize: "14px",
-                fontWeight: 600,
-                color: "#334155",
-              }}
+              className="mb-2 block text-sm font-semibold text-slate-700"
             >
               Password
             </label>
@@ -123,50 +82,20 @@ export default function LoginPage() {
               value={password}
               onChange={(e) => setPassword(e.target.value)}
               required
-              style={{
-                width: "100%",
-                padding: "14px 16px",
-                borderRadius: "12px",
-                border: "1px solid #cbd5e1",
-                fontSize: "15px",
-                color: "#0f172a",
-                background: "#ffffff",
-                outline: "none",
-                boxSizing: "border-box",
-              }}
+              className="w-full rounded-2xl border border-slate-300 bg-white px-4 py-3.5 text-[15px] text-slate-950 outline-none transition placeholder:text-slate-400 focus:border-blue-500 focus:ring-4 focus:ring-blue-100"
             />
           </div>
 
           <button
             type="submit"
             disabled={loading}
-            style={{
-              width: "100%",
-              padding: "14px 16px",
-              borderRadius: "12px",
-              border: "none",
-              background: "#0f172a",
-              color: "#ffffff",
-              fontSize: "15px",
-              fontWeight: 600,
-              cursor: loading ? "not-allowed" : "pointer",
-              opacity: loading ? 0.7 : 1,
-            }}
+            className="w-full rounded-2xl bg-slate-950 px-4 py-3.5 text-[15px] font-semibold text-white transition hover:bg-slate-800 disabled:cursor-not-allowed disabled:opacity-70"
           >
             {loading ? "Signing in..." : "Sign in"}
           </button>
 
           {error && (
-            <p
-              style={{
-                marginTop: "16px",
-                color: "#dc2626",
-                fontSize: "14px",
-                textAlign: "center",
-              }}
-            >
-              {error}
-            </p>
+            <p className="mt-4 text-center text-sm text-red-600">{error}</p>
           )}
         </form>
       </div>

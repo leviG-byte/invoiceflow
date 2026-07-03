@@ -2,6 +2,10 @@
 
 import { createClient } from "@/lib/supabase/client";
 import { useEffect, useMemo, useState } from "react";
+import Link from "next/link";
+import { useToast } from "@/components/ui/Toast";
+import ConfirmDialog from "@/components/ui/ConfirmDialog";
+import { CardSkeleton } from "@/components/ui/Skeleton";
 
 type Client = {
   id: string;
@@ -25,10 +29,13 @@ type DatabaseClient = {
 
 export default function ClientsPage() {
   const supabase = useMemo(() => createClient(), []);
+  const { toast } = useToast();
 
   const [clients, setClients] = useState<Client[]>([]);
   const [showForm, setShowForm] = useState(false);
   const [editingClientId, setEditingClientId] = useState<string | null>(null);
+  const [pendingDelete, setPendingDelete] = useState<Client | null>(null);
+  const [isDeleting, setIsDeleting] = useState(false);
 
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
@@ -37,7 +44,6 @@ export default function ClientsPage() {
   const [defaultPaymentMethod, setDefaultPaymentMethod] = useState("");
   const [defaultPaymentNotes, setDefaultPaymentNotes] = useState("");
 
-  const [message, setMessage] = useState("");
   const [isSaving, setIsSaving] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
 
@@ -57,16 +63,26 @@ export default function ClientsPage() {
   }
 
   async function loadClients() {
-    setIsLoading(true);
+    // Waiting on getUser() ensures the session is hydrated before querying;
+    // otherwise the request can go out unauthenticated and RLS returns [].
+    const {
+      data: { user },
+    } = await supabase.auth.getUser();
+
+    if (!user) {
+      setIsLoading(false);
+      return;
+    }
 
     const { data, error } = await supabase
       .from("clients")
       .select("*")
+      .eq("user_id", user.id)
       .order("created_at", { ascending: false });
 
     if (error) {
       console.error(error);
-      setMessage("Could not load clients.");
+      toast("Could not load clients.", "error");
       setIsLoading(false);
       return;
     }
@@ -80,7 +96,13 @@ export default function ClientsPage() {
   }
 
   useEffect(() => {
-    loadClients();
+    // Wrapped so the React Compiler lint can verify no synchronous setState.
+    async function load() {
+      await loadClients();
+    }
+
+    load();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   function resetForm() {
@@ -96,12 +118,22 @@ export default function ClientsPage() {
 
   async function handleSaveClient() {
     if (!name.trim()) {
-      setMessage("Client name is required.");
+      toast("Client name is required.", "error");
       return;
     }
 
     setIsSaving(true);
-    setMessage("");
+    
+
+    const {
+      data: { user },
+    } = await supabase.auth.getUser();
+
+    if (!user) {
+      toast("You must be logged in to save a client.", "error");
+      setIsSaving(false);
+      return;
+    }
 
     if (editingClientId) {
       const { error } = await supabase
@@ -114,28 +146,19 @@ export default function ClientsPage() {
           default_payment_method: defaultPaymentMethod.trim() || null,
           default_payment_notes: defaultPaymentNotes.trim() || null,
         })
-        .eq("id", editingClientId);
+        .eq("id", editingClientId)
+        .eq("user_id", user.id);
 
       if (error) {
         console.error(error);
-        setMessage("Could not update client.");
+        toast("Could not update client.", "error");
         setIsSaving(false);
         return;
       }
 
-      setMessage("Client updated successfully.");
+      toast("Client updated.", "success");
       await loadClients();
       resetForm();
-      setIsSaving(false);
-      return;
-    }
-
-    const {
-      data: { user },
-    } = await supabase.auth.getUser();
-
-    if (!user) {
-      setMessage("You must be logged in to save a client.");
       setIsSaving(false);
       return;
     }
@@ -154,12 +177,12 @@ export default function ClientsPage() {
 
     if (error) {
       console.error(error);
-      setMessage("Could not save client.");
+      toast("Could not save client.", "error");
       setIsSaving(false);
       return;
     }
 
-    setMessage("Client saved successfully.");
+    toast("Client saved.", "success");
     await loadClients();
     resetForm();
     setIsSaving(false);
@@ -174,21 +197,38 @@ export default function ClientsPage() {
     setDefaultPaymentMethod(client.defaultPaymentMethod || "");
     setDefaultPaymentNotes(client.defaultPaymentNotes || "");
     setShowForm(true);
-    setMessage("");
+    
   }
 
-  async function handleDeleteClient(clientId: string) {
-    const confirmed = window.confirm(
-      "Are you sure you want to delete this client?"
-    );
+  async function performDeleteClient() {
+    if (!pendingDelete) return;
+    const clientId = pendingDelete.id;
 
-    if (!confirmed) return;
+    setIsDeleting(true);
 
-    const { error } = await supabase.from("clients").delete().eq("id", clientId);
+    const {
+      data: { user },
+    } = await supabase.auth.getUser();
+
+    if (!user) {
+      toast("You must be logged in to delete a client.", "error");
+      setIsDeleting(false);
+      setPendingDelete(null);
+      return;
+    }
+
+    const { error } = await supabase
+      .from("clients")
+      .delete()
+      .eq("id", clientId)
+      .eq("user_id", user.id);
+
+    setIsDeleting(false);
+    setPendingDelete(null);
 
     if (error) {
       console.error(error);
-      setMessage("Could not delete client.");
+      toast("Could not delete client.", "error");
       return;
     }
 
@@ -196,7 +236,7 @@ export default function ClientsPage() {
       resetForm();
     }
 
-    setMessage("Client deleted successfully.");
+    toast("Client deleted.", "success");
     await loadClients();
   }
 
@@ -233,7 +273,7 @@ export default function ClientsPage() {
                 } else {
                   setShowForm(true);
                   setEditingClientId(null);
-                  setMessage("");
+                  
                 }
               }}
               className="inline-flex items-center justify-center rounded-2xl bg-white px-5 py-3 text-sm font-semibold text-slate-950 transition hover:bg-slate-100"
@@ -398,15 +438,11 @@ export default function ClientsPage() {
         </div>
       )}
 
-      {message && (
-        <div className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
-          <p className="text-sm text-slate-700">{message}</p>
-        </div>
-      )}
-
       {isLoading ? (
-        <div className="rounded-3xl border border-slate-200 bg-white p-6 shadow-sm">
-          <p className="text-slate-700">Loading clients...</p>
+        <div className="grid gap-4 lg:grid-cols-2 2xl:grid-cols-3">
+          <CardSkeleton lines={4} />
+          <CardSkeleton lines={4} />
+          <CardSkeleton lines={4} />
         </div>
       ) : clients.length === 0 ? (
         <div className="rounded-3xl border border-slate-200 bg-white p-8 text-center shadow-sm">
@@ -421,7 +457,7 @@ export default function ClientsPage() {
             onClick={() => {
               setShowForm(true);
               setEditingClientId(null);
-              setMessage("");
+              
             }}
             className="mt-4 inline-flex rounded-2xl bg-slate-950 px-5 py-3 text-sm font-semibold text-white transition hover:bg-slate-800"
           >
@@ -437,7 +473,7 @@ export default function ClientsPage() {
             >
               <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
                 <div className="min-w-0">
-                  <div className="flex items-start gap-3">
+                  <Link href={`/clients/${client.id}`} className="group flex items-start gap-3">
                     <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl bg-slate-900 text-sm font-bold text-white">
                       {client.name
                         .split(" ")
@@ -448,7 +484,7 @@ export default function ClientsPage() {
                     </div>
 
                     <div className="min-w-0">
-                      <p className="break-words text-xl font-semibold text-slate-900">
+                      <p className="break-words text-xl font-semibold text-slate-900 transition group-hover:text-blue-600">
                         {client.name}
                       </p>
 
@@ -456,7 +492,7 @@ export default function ClientsPage() {
                         {client.rate ? `$${client.rate}/hr` : "No rate set"}
                       </p>
                     </div>
-                  </div>
+                  </Link>
 
                   <div className="mt-4 space-y-1">
                     {client.email && (
@@ -472,6 +508,13 @@ export default function ClientsPage() {
                 </div>
 
                 <div className="flex gap-2 sm:flex-col sm:items-end">
+                  <Link
+                    href={`/clients/${client.id}`}
+                    className="rounded-xl bg-slate-950 px-4 py-2 text-center text-sm font-semibold text-white transition hover:bg-slate-800"
+                  >
+                    View
+                  </Link>
+
                   <button
                     onClick={() => handleEditClient(client)}
                     className="rounded-xl border border-slate-300 px-4 py-2 text-sm font-semibold text-slate-800 transition hover:border-slate-400 hover:bg-slate-50"
@@ -480,7 +523,7 @@ export default function ClientsPage() {
                   </button>
 
                   <button
-                    onClick={() => handleDeleteClient(client.id)}
+                    onClick={() => setPendingDelete(client)}
                     className="rounded-xl border border-red-200 px-4 py-2 text-sm font-semibold text-red-600 transition hover:bg-red-50"
                   >
                     Delete
@@ -513,6 +556,17 @@ export default function ClientsPage() {
           ))}
         </div>
       )}
+
+      <ConfirmDialog
+        open={pendingDelete !== null}
+        title={`Delete ${pendingDelete?.name ?? "this client"}?`}
+        description="This permanently removes the client and their saved payment defaults. Existing invoices are not affected."
+        confirmLabel="Delete Client"
+        destructive
+        busy={isDeleting}
+        onConfirm={performDeleteClient}
+        onCancel={() => setPendingDelete(null)}
+      />
     </div>
   );
 }

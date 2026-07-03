@@ -1,5 +1,13 @@
 import jsPDF from "jspdf";
-import { InvoiceItem, SavedInvoice, getDisplayStatus } from "@/lib/invoice-utils";
+import {
+  InvoiceItem,
+  SavedInvoice,
+  calculateInvoiceTotals,
+  getDisplayStatus,
+  getItemAmount,
+  getItemType,
+  sortItemsByDate,
+} from "@/lib/invoice-utils";
 
 export type BusinessProfilePdf = {
   businessName: string;
@@ -7,6 +15,11 @@ export type BusinessProfilePdf = {
   phone: string;
   address: string;
   logoUrl?: string;
+};
+
+export type PdfInvoice = SavedInvoice & {
+  paymentMethod?: string;
+  paymentDate?: string;
 };
 
 type ImageFormat = "PNG" | "JPEG" | "WEBP";
@@ -64,7 +77,7 @@ function drawWrappedText(
 }
 
 export async function generateInvoicePdf(
-  invoice: SavedInvoice,
+  invoice: PdfInvoice,
   businessProfile: BusinessProfilePdf
 ) {
   const pdf = new jsPDF("p", "mm", "a4");
@@ -74,7 +87,7 @@ export async function generateInvoicePdf(
 
   const displayStatus = getDisplayStatus(invoice);
   const isPaid = displayStatus === "Paid";
-  const paymentDate = (invoice as any).paymentDate;
+  const paymentDate = invoice.paymentDate;
 
   // HEADER TITLE
   pdf.setFont("helvetica", "bold");
@@ -156,8 +169,8 @@ export async function generateInvoicePdf(
   pdf.text(safeText(invoice.invoiceNumber), right, 52, { align: "right" });
   pdf.text(safeText(invoice.issueDate), right, 60, { align: "right" });
   pdf.text(safeText(invoice.dueDate), right, 68, { align: "right" });
-  pdf.text(safeText((invoice as any).paymentMethod), right, 76, { align: "right" });
-  pdf.text(safeText((invoice as any).paymentDate), right, 84, { align: "right" });
+  pdf.text(safeText(invoice.paymentMethod), right, 76, { align: "right" });
+  pdf.text(safeText(invoice.paymentDate), right, 84, { align: "right" });
 
   // BILL TO
   const billToTop = 96;
@@ -174,6 +187,16 @@ export async function generateInvoicePdf(
   // TABLE
   const tableTop = 128;
 
+  const items: InvoiceItem[] = sortItemsByDate(
+    Array.isArray(invoice.items) ? invoice.items : []
+  );
+
+  // Flat-rate invoices drop the Hours/Rate columns and give the
+  // description the extra width.
+  const allFixed =
+    items.length > 0 && items.every((item) => getItemType(item) === "fixed");
+  const descriptionWidth = allFixed ? 110 : 68;
+
   pdf.setFillColor(243, 244, 246);
   pdf.rect(left, tableTop, 170, 10, "F");
 
@@ -182,8 +205,12 @@ export async function generateInvoicePdf(
 
   pdf.text("Date", 24, tableTop + 6.5);
   pdf.text("Description", 48, tableTop + 6.5);
-  pdf.text("Hours", 126, tableTop + 6.5);
-  pdf.text("Rate", 145, tableTop + 6.5);
+
+  if (!allFixed) {
+    pdf.text("Hours", 126, tableTop + 6.5);
+    pdf.text("Rate", 145, tableTop + 6.5);
+  }
+
   pdf.text("Amount", 170, tableTop + 6.5);
 
   let y = tableTop + 18;
@@ -191,11 +218,13 @@ export async function generateInvoicePdf(
   pdf.setFont("helvetica", "normal");
   pdf.setFontSize(9.5);
 
-  const items: InvoiceItem[] = Array.isArray(invoice.items) ? invoice.items : [];
-
   items.forEach((item, index) => {
-    const amount = (Number(item.hours) || 0) * (Number(item.rate) || 0);
-    const descriptionLines = pdf.splitTextToSize(item.description || "-", 68);
+    const isFixed = getItemType(item) === "fixed";
+    const amount = getItemAmount(item);
+    const descriptionLines = pdf.splitTextToSize(
+      item.description || "-",
+      descriptionWidth
+    );
     const rowHeight = Math.max(8, descriptionLines.length * 5);
 
     if (index % 2 === 0) {
@@ -205,24 +234,63 @@ export async function generateInvoicePdf(
 
     pdf.text(safeText(item.date), 24, y);
     pdf.text(descriptionLines, 48, y);
-    pdf.text(String(Number(item.hours) || 0), 128, y);
-    pdf.text(money(item.rate), 145, y);
+
+    if (!allFixed) {
+      pdf.text(isFixed ? "-" : String(Number(item.hours) || 0), 128, y);
+      pdf.text(isFixed ? "Flat" : money(item.rate), 145, y);
+    }
+
     pdf.text(money(amount), 170, y);
 
     y += rowHeight;
   });
 
-  // TOTAL BOX
+  // TOTALS BOX
   y += 10;
 
-  pdf.setFillColor(249, 250, 251);
-  pdf.rect(120, y - 6, 70, 14, "F");
+  const taxRate = Number(invoice.taxRate) || 0;
+  const discount = Number(invoice.discount) || 0;
+  const totals = calculateInvoiceTotals(items, taxRate, discount);
+  const hasBreakdown = totals.discountAmount > 0 || totals.taxAmount > 0;
 
-  pdf.setFont("helvetica", "bold");
-  pdf.setFontSize(12);
+  if (hasBreakdown) {
+    pdf.setFillColor(249, 250, 251);
+    pdf.rect(120, y - 6, 70, 34, "F");
 
-  pdf.text("Total", 125, y + 2);
-  pdf.text(money(invoice.total), right, y + 2, { align: "right" });
+    pdf.setFont("helvetica", "normal");
+    pdf.setFontSize(9.5);
+
+    pdf.text("Subtotal", 125, y);
+    pdf.text(money(totals.subtotal), right, y, { align: "right" });
+    y += 6;
+
+    if (totals.discountAmount > 0) {
+      pdf.text("Discount", 125, y);
+      pdf.text(`-${money(totals.discountAmount)}`, right, y, { align: "right" });
+      y += 6;
+    }
+
+    if (totals.taxAmount > 0) {
+      pdf.text(`Tax (${taxRate}%)`, 125, y);
+      pdf.text(money(totals.taxAmount), right, y, { align: "right" });
+      y += 6;
+    }
+
+    pdf.setFont("helvetica", "bold");
+    pdf.setFontSize(12);
+    pdf.text("Total", 125, y + 2);
+    pdf.text(money(invoice.total), right, y + 2, { align: "right" });
+    y += 4;
+  } else {
+    pdf.setFillColor(249, 250, 251);
+    pdf.rect(120, y - 6, 70, 14, "F");
+
+    pdf.setFont("helvetica", "bold");
+    pdf.setFontSize(12);
+
+    pdf.text("Total", 125, y + 2);
+    pdf.text(money(invoice.total), right, y + 2, { align: "right" });
+  }
 
   // PAYMENT NOTES
   if (invoice.paymentNotes && invoice.paymentNotes.trim()) {

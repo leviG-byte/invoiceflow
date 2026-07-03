@@ -10,7 +10,11 @@ import {
   SavedInvoice,
   getDisplayStatus,
   getInitials,
+  getItemType,
 } from "@/lib/invoice-utils";
+import { useToast } from "@/components/ui/Toast";
+import ConfirmDialog from "@/components/ui/ConfirmDialog";
+import { StatCardSkeleton, TableRowSkeleton } from "@/components/ui/Skeleton";
 
 type DatabaseInvoiceRow = {
   id: string;
@@ -29,13 +33,16 @@ type UIInvoice = SavedInvoice & {
 };
 
 export default function InvoicesPage() {
-  const supabase = createClient();
+  const supabase = useMemo(() => createClient(), []);
+  const { toast } = useToast();
   const [invoices, setInvoices] = useState<UIInvoice[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState("");
   const [statusFilter, setStatusFilter] = useState("All");
   const [sortBy, setSortBy] = useState("newest");
   const [showMobileFilters, setShowMobileFilters] = useState(false);
-  const [message, setMessage] = useState("");
+  const [pendingDelete, setPendingDelete] = useState<UIInvoice | null>(null);
+  const [isDeleting, setIsDeleting] = useState(false);
 
   function mapDatabaseInvoiceToUI(invoice: DatabaseInvoiceRow): UIInvoice {
     return {
@@ -51,76 +58,110 @@ export default function InvoicesPage() {
             description: item.description ?? "",
             hours: item.hours ?? "",
             rate: item.rate ?? "",
+            type: getItemType(item),
+            amount: item.amount ?? "",
           }))
         : [],
       total: Number(invoice.total) || 0,
     };
   }
 
-  async function loadInvoices() {
-    const { data, error } = await supabase
-      .from("invoices")
-      .select("*")
-      .order("created_at", { ascending: false });
+  useEffect(() => {
+    async function loadInvoices() {
+      // Waiting on getUser() ensures the session is hydrated before querying;
+      // otherwise the request can go out unauthenticated and RLS returns [].
+      const {
+        data: { user },
+      } = await supabase.auth.getUser();
 
-    if (error) {
-      console.error("Load invoices error:", error);
-      setMessage("Could not load invoices from database.");
+      if (!user) {
+        setIsLoading(false);
+        return;
+      }
+
+      const { data, error } = await supabase
+        .from("invoices")
+        .select("*")
+        .eq("user_id", user.id)
+        .order("created_at", { ascending: false });
+
+      setIsLoading(false);
+
+      if (error) {
+        console.error("Load invoices error:", error);
+        toast("Could not load invoices from database.", "error");
+        return;
+      }
+
+      const formattedInvoices: UIInvoice[] = (
+        (data as DatabaseInvoiceRow[]) || []
+      ).map(mapDatabaseInvoiceToUI);
+
+      setInvoices(formattedInvoices);
+    }
+
+    loadInvoices();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  async function performDeleteInvoice() {
+    if (!pendingDelete) return;
+    const invoice = pendingDelete;
+
+    setIsDeleting(true);
+
+    const {
+      data: { user },
+    } = await supabase.auth.getUser();
+
+    if (!user) {
+      toast("You must be logged in to delete an invoice.", "error");
+      setIsDeleting(false);
+      setPendingDelete(null);
       return;
     }
 
-    const formattedInvoices: UIInvoice[] = (
-      (data as DatabaseInvoiceRow[]) || []
-    ).map(mapDatabaseInvoiceToUI);
+    const { error } = await supabase
+      .from("invoices")
+      .delete()
+      .eq("id", invoice.id)
+      .eq("user_id", user.id);
 
-    setInvoices(formattedInvoices);
-  }
-
-  useEffect(() => {
-    loadInvoices();
-  }, []);
-
-  useEffect(() => {
-    if (!message) return;
-
-    const timeout = setTimeout(() => {
-      setMessage("");
-    }, 2500);
-
-    return () => clearTimeout(timeout);
-  }, [message]);
-
-  async function handleDeleteInvoice(invoice: UIInvoice) {
-    const confirmed = window.confirm(
-      "Are you sure you want to delete this invoice?"
-    );
-
-    if (!confirmed) return;
-
-    const { error } = await supabase.from("invoices").delete().eq("id", invoice.id);
+    setIsDeleting(false);
+    setPendingDelete(null);
 
     if (error) {
       console.error("Delete invoice error:", error);
-      setMessage("Could not delete invoice.");
+      toast("Could not delete invoice.", "error");
       return;
     }
 
     const updatedInvoices = invoices.filter((item) => item.id !== invoice.id);
     setInvoices(updatedInvoices);
-    setMessage(`Invoice ${invoice.invoiceNumber} deleted.`);
+    toast(`Invoice ${invoice.invoiceNumber} deleted.`, "success");
   }
 
   async function handleStatusChange(invoice: UIInvoice, newStatus: string) {
     const statusValue = newStatus as InvoiceStatus;
 
+    const {
+      data: { user },
+    } = await supabase.auth.getUser();
+
+    if (!user) {
+      toast("You must be logged in to update an invoice.", "error");
+      return;
+    }
+
     const { error } = await supabase
       .from("invoices")
       .update({ status: statusValue })
-      .eq("id", invoice.id);
+      .eq("id", invoice.id)
+      .eq("user_id", user.id);
 
     if (error) {
       console.error("Update status error:", error);
-      setMessage("Could not update invoice status.");
+      toast("Could not update invoice status.", "error");
       return;
     }
 
@@ -129,7 +170,7 @@ export default function InvoicesPage() {
     );
 
     setInvoices(updatedInvoices);
-    setMessage(`Invoice ${invoice.invoiceNumber} updated to ${newStatus}.`);
+    toast(`Invoice ${invoice.invoiceNumber} updated to ${newStatus}.`, "success");
   }
 
   function handleDownloadPdf(invoice: UIInvoice) {
@@ -139,9 +180,9 @@ export default function InvoicesPage() {
   async function handleCopyInvoiceNumber(invoiceNumber: string) {
     try {
       await navigator.clipboard.writeText(invoiceNumber);
-      setMessage(`Copied ${invoiceNumber}.`);
+      toast(`Copied ${invoiceNumber}.`, "success");
     } catch {
-      setMessage("Could not copy invoice number.");
+      toast("Could not copy invoice number.", "error");
     }
   }
 
@@ -158,6 +199,8 @@ export default function InvoicesPage() {
           description: item.description,
           hours: item.hours,
           rate: item.rate,
+          type: getItemType(item),
+          amount: item.amount ?? "",
         })),
       })
     );
@@ -300,12 +343,6 @@ export default function InvoicesPage() {
         </div>
       </div>
 
-      {message && (
-        <div className="rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm font-medium text-slate-700 shadow-sm">
-          {message}
-        </div>
-      )}
-
       <div className="hidden rounded-3xl border border-slate-200 bg-white p-5 shadow-sm md:block">
         <div className="mb-5">
           <h2 className="text-lg font-semibold text-slate-900">Filters</h2>
@@ -431,7 +468,13 @@ export default function InvoicesPage() {
 
       <div className="mt-1">
         <div className="grid gap-4 md:hidden">
-          {filteredInvoices.length === 0 ? (
+          {isLoading ? (
+            <>
+              <StatCardSkeleton />
+              <StatCardSkeleton />
+              <StatCardSkeleton />
+            </>
+          ) : filteredInvoices.length === 0 ? (
             <div className="rounded-3xl border border-dashed border-slate-300 bg-white p-8 text-center shadow-sm">
               <p className="text-base font-semibold text-slate-900">
                 No invoices yet
@@ -568,7 +611,7 @@ export default function InvoicesPage() {
                     </button>
 
                     <button
-                      onClick={() => handleDeleteInvoice(invoice)}
+                      onClick={() => setPendingDelete(invoice)}
                       className="col-span-2 rounded-xl border border-red-200 px-3 py-2.5 text-sm font-semibold text-red-600 transition hover:bg-red-50"
                     >
                       Delete
@@ -595,7 +638,16 @@ export default function InvoicesPage() {
             </thead>
 
             <tbody>
-              {filteredInvoices.length === 0 ? (
+              {isLoading ? (
+                <tr>
+                  <td colSpan={7} className="p-0">
+                    <TableRowSkeleton cols={7} />
+                    <TableRowSkeleton cols={7} />
+                    <TableRowSkeleton cols={7} />
+                    <TableRowSkeleton cols={7} />
+                  </td>
+                </tr>
+              ) : filteredInvoices.length === 0 ? (
                 <tr>
                   <td colSpan={7} className="px-4 py-12">
                     <div className="text-center">
@@ -712,7 +764,7 @@ export default function InvoicesPage() {
                           </button>
 
                           <button
-                            onClick={() => handleDeleteInvoice(invoice)}
+                            onClick={() => setPendingDelete(invoice)}
                             className="rounded-xl border border-red-200 px-3 py-2 text-sm font-semibold text-red-600 transition hover:bg-red-50"
                           >
                             Delete
@@ -727,6 +779,17 @@ export default function InvoicesPage() {
           </table>
         </div>
       </div>
+
+      <ConfirmDialog
+        open={pendingDelete !== null}
+        title={`Delete invoice ${pendingDelete?.invoiceNumber ?? ""}?`}
+        description="This permanently removes the invoice and cannot be undone."
+        confirmLabel="Delete Invoice"
+        destructive
+        busy={isDeleting}
+        onConfirm={performDeleteInvoice}
+        onCancel={() => setPendingDelete(null)}
+      />
     </div>
   );
 }

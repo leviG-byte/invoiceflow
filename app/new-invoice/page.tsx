@@ -7,12 +7,20 @@ import { useEffect, useMemo, useState } from "react";
 import {
   DRAFT_INVOICE_STORAGE_KEY,
   InvoiceItem,
+  InvoiceItemType,
   InvoiceStatus,
   SavedInvoice,
+  calculateInvoiceTotals,
   generateNextInvoiceNumber,
   getDisplayStatus,
+  getItemType,
   getStatusClasses,
+  isItemComplete,
+  sortItemsByDate,
 } from "@/lib/invoice-utils";
+import { useToast } from "@/components/ui/Toast";
+import ConfirmDialog from "@/components/ui/ConfirmDialog";
+import DescriptionField from "@/components/ui/DescriptionField";
 
 type SavedClient = {
   id: string;
@@ -31,6 +39,7 @@ type BusinessProfile = {
   phone: string;
   address: string;
   logoUrl?: string;
+  defaultItemType?: InvoiceItemType;
 };
 
 type DraftInvoice = {
@@ -56,6 +65,8 @@ type DatabaseInvoiceRow = {
   payment_notes: string | null;
   payment_method: string | null;
   payment_date: string | null;
+  tax_rate: number | string | null;
+  discount: number | string | null;
   created_at?: string;
 };
 
@@ -78,6 +89,7 @@ type DatabaseBusinessProfileRow = {
   phone: string | null;
   address: string | null;
   logo_url: string | null;
+  default_item_type: string | null;
 };
 
 type UIInvoice = SavedInvoice & {
@@ -88,6 +100,7 @@ type UIInvoice = SavedInvoice & {
 
 export default function NewInvoicePage() {
   const supabase = useMemo(() => createClient(), []);
+  const { toast } = useToast();
 
   const [clientName, setClientName] = useState("");
   const [invoiceNumber, setInvoiceNumber] = useState("INV-001");
@@ -97,7 +110,10 @@ export default function NewInvoicePage() {
   const [paymentNotes, setPaymentNotes] = useState("");
   const [paymentMethod, setPaymentMethod] = useState("");
   const [paymentDate, setPaymentDate] = useState("");
-  const [message, setMessage] = useState("");
+  const [taxRate, setTaxRate] = useState("");
+  const [discount, setDiscount] = useState("");
+  const [pendingDeleteId, setPendingDeleteId] = useState<string | null>(null);
+  const [isDeleting, setIsDeleting] = useState(false);
 
   const [savedInvoices, setSavedInvoices] = useState<UIInvoice[]>([]);
   const [previewInvoice, setPreviewInvoice] = useState<UIInvoice | null>(null);
@@ -114,7 +130,7 @@ export default function NewInvoicePage() {
   });
 
   const [items, setItems] = useState<InvoiceItem[]>([
-    { date: "", description: "", hours: "", rate: "" },
+    { date: "", description: "", hours: "", rate: "", type: "hourly", amount: "" },
   ]);
 
   function getTodayDate() {
@@ -135,11 +151,15 @@ export default function NewInvoicePage() {
             description: item.description ?? "",
             hours: item.hours ?? "",
             rate: item.rate ?? "",
+            type: getItemType(item),
+            amount: item.amount ?? "",
           }))
         : [],
       paymentNotes: invoice.payment_notes || "",
       paymentMethod: invoice.payment_method || "",
       paymentDate: invoice.payment_date || "",
+      taxRate: Number(invoice.tax_rate) || 0,
+      discount: Number(invoice.discount) || 0,
       total: Number(invoice.total) || 0,
     };
   }
@@ -216,36 +236,47 @@ export default function NewInvoicePage() {
               description: item.description ?? "",
               hours: item.hours ?? "",
               rate: item.rate ?? "",
+              type: getItemType(item),
+              amount: item.amount ?? "",
             }))
           );
         }
 
-        setMessage("Duplicated invoice loaded. Review and save when ready.");
+        toast("Duplicated invoice loaded. Review and save when ready.", "info");
       } catch {
-        setMessage("Could not load duplicated invoice.");
+        toast("Could not load duplicated invoice.", "error");
       } finally {
         localStorage.removeItem(DRAFT_INVOICE_STORAGE_KEY);
       }
     }
   }, []);
 
-  const total = useMemo(() => {
-    return items.reduce((sum, item) => {
-      const hours = Number(item.hours) || 0;
-      const rate = Number(item.rate) || 0;
-      return sum + hours * rate;
-    }, 0);
-  }, [items]);
+  const totals = useMemo(
+    () =>
+      calculateInvoiceTotals(items, Number(taxRate) || 0, Number(discount) || 0),
+    [items, taxRate, discount]
+  );
+
+  const total = totals.total;
 
   async function loadInvoices() {
+    // Waiting on getUser() ensures the session is hydrated before querying;
+    // otherwise the request can go out unauthenticated and RLS returns [].
+    const {
+      data: { user },
+    } = await supabase.auth.getUser();
+
+    if (!user) return;
+
     const { data, error } = await supabase
       .from("invoices")
       .select("*")
+      .eq("user_id", user.id)
       .order("created_at", { ascending: false });
 
     if (error) {
       console.error(error);
-      setMessage("Could not load invoices from database.");
+      toast("Could not load invoices from database.", "error");
       return;
     }
 
@@ -264,14 +295,21 @@ export default function NewInvoicePage() {
   }
 
   async function loadClients() {
+    const {
+      data: { user },
+    } = await supabase.auth.getUser();
+
+    if (!user) return;
+
     const { data, error } = await supabase
       .from("clients")
       .select("*")
+      .eq("user_id", user.id)
       .order("created_at", { ascending: false });
 
     if (error) {
       console.error(error);
-      setMessage("Could not load clients.");
+      toast("Could not load clients.", "error");
       return;
     }
 
@@ -301,12 +339,14 @@ export default function NewInvoicePage() {
 
     if (error) {
       console.error("Load business profile error:", error);
-      setMessage("Could not load business profile.");
+      toast("Could not load business profile.", "error");
       return;
     }
 
     if (data) {
       const profile = data as DatabaseBusinessProfileRow;
+      const defaultItemType: InvoiceItemType =
+        profile.default_item_type === "fixed" ? "fixed" : "hourly";
 
       setBusinessProfile({
         id: profile.id,
@@ -315,7 +355,19 @@ export default function NewInvoicePage() {
         phone: profile.phone || "",
         address: profile.address || "",
         logoUrl: profile.logo_url || "",
+        defaultItemType,
       });
+
+      // Apply the business's preferred invoice format to the untouched
+      // starter row only — never rewrite rows the user already edited.
+      setItems((prev) =>
+        prev.length === 1 &&
+        !prev[0].description &&
+        !prev[0].hours &&
+        !prev[0].amount
+          ? [{ ...prev[0], type: defaultItemType }]
+          : prev
+      );
     }
   }
 
@@ -330,15 +382,28 @@ export default function NewInvoicePage() {
       ? String(selectedClientData.rate)
       : previousRate;
 
+    const inheritedType: InvoiceItemType =
+      items.length > 0
+        ? getItemType(items[items.length - 1])
+        : businessProfile.defaultItemType || "hourly";
+
     setItems((previous) => [
       ...previous,
-      { date: "", description: "", hours: "", rate: autoRate },
+      { date: "", description: "", hours: "", rate: autoRate, type: inheritedType, amount: "" },
     ]);
+  }
+
+  function handleItemTypeChange(index: number, type: InvoiceItemType) {
+    setItems((previous) =>
+      previous.map((item, itemIndex) =>
+        itemIndex === index ? { ...item, type } : item
+      )
+    );
   }
 
   function handleRemoveItem(indexToRemove: number) {
     if (items.length === 1) {
-      setMessage("At least one invoice item is required.");
+      toast("At least one invoice item is required.", "error");
       return;
     }
 
@@ -405,15 +470,16 @@ export default function NewInvoicePage() {
   }
 
   async function handleSaveInvoice() {
-    const hasInvalidItem = items.some(
-      (item) => !item.description || !item.hours || !item.rate
-    );
+    const hasInvalidItem = items.some((item) => !isItemComplete(item));
 
     const normalizedInvoiceNumber = invoiceNumber.trim().toUpperCase();
     const finalStatus: InvoiceStatus = paymentDate ? "Paid" : status;
 
     if (!clientName || !normalizedInvoiceNumber || hasInvalidItem) {
-      setMessage("Please complete all invoice fields and item rows before saving.");
+      toast(
+        "Please complete all invoice fields and item rows before saving.",
+        "error"
+      );
       return;
     }
 
@@ -423,8 +489,9 @@ export default function NewInvoicePage() {
     );
 
     if (duplicateInState) {
-      setMessage(
-        `Invoice number ${normalizedInvoiceNumber} already exists. Please use a different number.`
+      toast(
+        `Invoice number ${normalizedInvoiceNumber} already exists. Please use a different number.`,
+        "error"
       );
       return;
     }
@@ -434,7 +501,7 @@ export default function NewInvoicePage() {
     } = await supabase.auth.getUser();
 
     if (!user) {
-      setMessage("You must be logged in to save an invoice.");
+      toast("You must be logged in to save an invoice.", "error");
       return;
     }
 
@@ -447,10 +514,12 @@ export default function NewInvoicePage() {
           issue_date: issueDate || null,
           due_date: dueDate || null,
           status: finalStatus,
-          items,
+          items: sortItemsByDate(items),
           payment_notes: paymentNotes || null,
           payment_method: paymentMethod || null,
           payment_date: paymentDate || null,
+          tax_rate: Number(taxRate) || 0,
+          discount: Number(discount) || 0,
           total,
           user_id: user.id,
         },
@@ -462,11 +531,12 @@ export default function NewInvoicePage() {
       console.error(error);
 
       if ((error as { code?: string }).code === "23505") {
-        setMessage(
-          `Invoice number ${normalizedInvoiceNumber} already exists. Please use a different number.`
+        toast(
+          `Invoice number ${normalizedInvoiceNumber} already exists. Please use a different number.`,
+          "error"
         );
       } else {
-        setMessage("Error saving invoice to database.");
+        toast("Error saving invoice to database.", "error");
       }
       return;
     }
@@ -476,7 +546,7 @@ export default function NewInvoicePage() {
 
     setSavedInvoices(updatedInvoices);
     setPreviewInvoice(newInvoice);
-    setMessage(`Invoice ${normalizedInvoiceNumber} saved to database.`);
+    toast(`Invoice ${normalizedInvoiceNumber} saved.`, "success");
 
     setInvoiceNumber(findNextAvailableInvoiceNumber(updatedInvoices));
     setClientName("");
@@ -487,19 +557,44 @@ export default function NewInvoicePage() {
     setPaymentNotes("");
     setPaymentMethod("");
     setPaymentDate("");
-    setItems([{ date: "", description: "", hours: "", rate: "" }]);
+    setTaxRate("");
+    setDiscount("");
+    setItems([{ date: "", description: "", hours: "", rate: "", type: "hourly", amount: "" }]);
   }
 
-  async function handleDeleteInvoice(invoiceId: string) {
+  async function performDeleteInvoice() {
+    if (!pendingDeleteId) return;
+    const invoiceId = pendingDeleteId;
+
     const invoiceToDelete = savedInvoices.find(
       (invoice) => invoice.id === invoiceId
     );
 
-    const { error } = await supabase.from("invoices").delete().eq("id", invoiceId);
+    setIsDeleting(true);
+
+    const {
+      data: { user },
+    } = await supabase.auth.getUser();
+
+    if (!user) {
+      toast("You must be logged in to delete an invoice.", "error");
+      setIsDeleting(false);
+      setPendingDeleteId(null);
+      return;
+    }
+
+    const { error } = await supabase
+      .from("invoices")
+      .delete()
+      .eq("id", invoiceId)
+      .eq("user_id", user.id);
+
+    setIsDeleting(false);
+    setPendingDeleteId(null);
 
     if (error) {
       console.error(error);
-      setMessage("Error deleting invoice from database.");
+      toast("Error deleting invoice from database.", "error");
       return;
     }
 
@@ -516,10 +611,11 @@ export default function NewInvoicePage() {
       setPreviewInvoice(updatedInvoices[0]);
     }
 
-    setMessage(
+    toast(
       invoiceToDelete
-        ? `Invoice ${invoiceToDelete.invoiceNumber} deleted successfully.`
-        : "Invoice deleted successfully."
+        ? `Invoice ${invoiceToDelete.invoiceNumber} deleted.`
+        : "Invoice deleted.",
+      "success"
     );
   }
 
@@ -541,14 +637,24 @@ export default function NewInvoicePage() {
       updatePayload.payment_date = null;
     }
 
+    const {
+      data: { user },
+    } = await supabase.auth.getUser();
+
+    if (!user) {
+      toast("You must be logged in to update an invoice.", "error");
+      return;
+    }
+
     const { error } = await supabase
       .from("invoices")
       .update(updatePayload)
-      .eq("id", invoiceId);
+      .eq("id", invoiceId)
+      .eq("user_id", user.id);
 
     if (error) {
       console.error(error);
-      setMessage("Error updating invoice status.");
+      toast("Error updating invoice status.", "error");
       return;
     }
 
@@ -574,10 +680,11 @@ export default function NewInvoicePage() {
 
     const updatedInvoice = updatedInvoices.find((invoice) => invoice.id === invoiceId);
 
-    setMessage(
+    toast(
       updatedInvoice
         ? `Invoice ${updatedInvoice.invoiceNumber} updated to ${newStatus}.`
-        : `Invoice updated to ${newStatus}.`
+        : `Invoice updated to ${newStatus}.`,
+      "success"
     );
   }
 
@@ -585,10 +692,10 @@ export default function NewInvoicePage() {
     try {
       const pdf = await generateInvoicePdf(invoice, businessProfile);
       pdf.save(`${invoice.invoiceNumber}.pdf`);
-      setMessage(`PDF downloaded for ${invoice.invoiceNumber}.`);
+      toast(`PDF downloaded for ${invoice.invoiceNumber}.`, "success");
     } catch (error) {
       console.error(error);
-      setMessage("There was a problem generating the PDF.");
+      toast("There was a problem generating the PDF.", "error");
     }
   }
 
@@ -815,7 +922,22 @@ export default function NewInvoicePage() {
                       </button>
                     </div>
 
-                    <div className="grid gap-4 lg:grid-cols-2 2xl:grid-cols-4">
+                    <div className="grid gap-4 lg:grid-cols-2 2xl:grid-cols-5">
+                      <select
+                        value={getItemType(item)}
+                        onChange={(e) =>
+                          handleItemTypeChange(
+                            index,
+                            e.target.value as InvoiceItemType
+                          )
+                        }
+                        aria-label="Item type"
+                        className="w-full min-w-0 rounded-2xl border border-slate-300 bg-white px-4 py-3 text-slate-900 outline-none transition focus:border-blue-500 focus:ring-4 focus:ring-blue-100"
+                      >
+                        <option value="hourly">Hourly</option>
+                        <option value="fixed">Flat Fee</option>
+                      </select>
+
                       <input
                         type="date"
                         value={item.date}
@@ -825,50 +947,122 @@ export default function NewInvoicePage() {
                         className="w-full min-w-0 rounded-2xl border border-slate-300 bg-white px-4 py-3 text-slate-900 outline-none transition focus:border-blue-500 focus:ring-4 focus:ring-blue-100"
                       />
 
-                      <input
-                        type="text"
-                        placeholder="Description"
+                      <DescriptionField
                         value={item.description}
-                        onChange={(e) =>
-                          handleItemChange(index, "description", e.target.value)
+                        onChange={(value) =>
+                          handleItemChange(index, "description", value)
                         }
-                        className="w-full min-w-0 rounded-2xl border border-slate-300 bg-white px-4 py-3 text-slate-900 placeholder-slate-400 outline-none transition focus:border-blue-500 focus:ring-4 focus:ring-blue-100"
                       />
 
-                      <input
-                        type="number"
-                        min="0"
-                        step="0.01"
-                        placeholder="Hours"
-                        value={item.hours}
-                        onChange={(e) =>
-                          handleItemChange(index, "hours", e.target.value)
-                        }
-                        className="w-full min-w-0 rounded-2xl border border-slate-300 bg-white px-4 py-3 text-slate-900 placeholder-slate-400 outline-none transition focus:border-blue-500 focus:ring-4 focus:ring-blue-100"
-                      />
+                      {getItemType(item) === "fixed" ? (
+                        <input
+                          type="number"
+                          min="0"
+                          step="0.01"
+                          placeholder="Amount ($)"
+                          value={item.amount || ""}
+                          onChange={(e) =>
+                            handleItemChange(index, "amount", e.target.value)
+                          }
+                          className="w-full min-w-0 rounded-2xl border border-slate-300 bg-white px-4 py-3 text-slate-900 placeholder-slate-400 outline-none transition focus:border-blue-500 focus:ring-4 focus:ring-blue-100 2xl:col-span-2"
+                        />
+                      ) : (
+                        <>
+                          <input
+                            type="number"
+                            min="0"
+                            step="0.01"
+                            placeholder="Hours"
+                            value={item.hours}
+                            onChange={(e) =>
+                              handleItemChange(index, "hours", e.target.value)
+                            }
+                            className="w-full min-w-0 rounded-2xl border border-slate-300 bg-white px-4 py-3 text-slate-900 placeholder-slate-400 outline-none transition focus:border-blue-500 focus:ring-4 focus:ring-blue-100"
+                          />
 
-                      <input
-                        type="number"
-                        min="0"
-                        step="0.01"
-                        placeholder="Rate"
-                        value={item.rate}
-                        onChange={(e) =>
-                          handleItemChange(index, "rate", e.target.value)
-                        }
-                        className="w-full min-w-0 rounded-2xl border border-slate-300 bg-white px-4 py-3 text-slate-900 placeholder-slate-400 outline-none transition focus:border-blue-500 focus:ring-4 focus:ring-blue-100"
-                      />
+                          <input
+                            type="number"
+                            min="0"
+                            step="0.01"
+                            placeholder="Rate"
+                            value={item.rate}
+                            onChange={(e) =>
+                              handleItemChange(index, "rate", e.target.value)
+                            }
+                            className="w-full min-w-0 rounded-2xl border border-slate-300 bg-white px-4 py-3 text-slate-900 placeholder-slate-400 outline-none transition focus:border-blue-500 focus:ring-4 focus:ring-blue-100"
+                          />
+                        </>
+                      )}
                     </div>
                   </div>
                 ))}
               </div>
             </div>
 
+            <div className="mt-6 grid gap-4 sm:grid-cols-2">
+              <div>
+                <label className="mb-2 block text-sm font-medium text-slate-700">
+                  Tax Rate (%)
+                </label>
+                <input
+                  type="number"
+                  min="0"
+                  step="0.01"
+                  placeholder="0"
+                  value={taxRate}
+                  onChange={(e) => setTaxRate(e.target.value)}
+                  className="w-full rounded-2xl border border-slate-300 bg-white px-4 py-3 text-slate-900 placeholder-slate-400 outline-none transition focus:border-blue-500 focus:ring-4 focus:ring-blue-100"
+                />
+              </div>
+
+              <div>
+                <label className="mb-2 block text-sm font-medium text-slate-700">
+                  Discount ($)
+                </label>
+                <input
+                  type="number"
+                  min="0"
+                  step="0.01"
+                  placeholder="0"
+                  value={discount}
+                  onChange={(e) => setDiscount(e.target.value)}
+                  className="w-full rounded-2xl border border-slate-300 bg-white px-4 py-3 text-slate-900 placeholder-slate-400 outline-none transition focus:border-blue-500 focus:ring-4 focus:ring-blue-100"
+                />
+              </div>
+            </div>
+
             <div className="mt-8 rounded-3xl border border-slate-200 bg-slate-950 p-5 text-white shadow-sm sm:p-6">
-              <div className="flex flex-col gap-5 sm:flex-row sm:items-center sm:justify-between">
-                <div>
-                  <p className="text-sm text-slate-300">Invoice Total</p>
-                  <p className="mt-1 text-3xl font-bold">${total.toFixed(2)}</p>
+              <div className="flex flex-col gap-5 sm:flex-row sm:items-end sm:justify-between">
+                <div className="min-w-0 space-y-1.5 text-sm">
+                  <div className="flex items-center justify-between gap-8 text-slate-300 sm:justify-start">
+                    <span className="w-24">Subtotal</span>
+                    <span className="font-medium text-white">
+                      ${totals.subtotal.toFixed(2)}
+                    </span>
+                  </div>
+
+                  {totals.discountAmount > 0 && (
+                    <div className="flex items-center justify-between gap-8 text-slate-300 sm:justify-start">
+                      <span className="w-24">Discount</span>
+                      <span className="font-medium text-emerald-400">
+                        −${totals.discountAmount.toFixed(2)}
+                      </span>
+                    </div>
+                  )}
+
+                  {totals.taxAmount > 0 && (
+                    <div className="flex items-center justify-between gap-8 text-slate-300 sm:justify-start">
+                      <span className="w-24">Tax ({Number(taxRate) || 0}%)</span>
+                      <span className="font-medium text-white">
+                        ${totals.taxAmount.toFixed(2)}
+                      </span>
+                    </div>
+                  )}
+
+                  <div className="flex items-center justify-between gap-8 border-t border-white/10 pt-2 sm:justify-start">
+                    <span className="w-24 text-slate-300">Total</span>
+                    <span className="text-3xl font-bold">${total.toFixed(2)}</span>
+                  </div>
                 </div>
 
                 <button
@@ -879,12 +1073,6 @@ export default function NewInvoicePage() {
                 </button>
               </div>
             </div>
-
-            {message && (
-              <div className="mt-6 rounded-2xl border border-blue-200 bg-blue-50 px-4 py-3 text-sm text-blue-800">
-                {message}
-              </div>
-            )}
           </section>
 
           <aside className="min-w-0 space-y-6">
@@ -1120,7 +1308,7 @@ export default function NewInvoicePage() {
                           </button>
 
                           <button
-                            onClick={() => handleDeleteInvoice(invoice.id)}
+                            onClick={() => setPendingDeleteId(invoice.id)}
                             className="inline-flex items-center justify-center rounded-xl bg-red-600 px-4 py-2.5 text-sm font-semibold text-white transition hover:bg-red-700"
                           >
                             Delete
@@ -1135,6 +1323,17 @@ export default function NewInvoicePage() {
           </aside>
         </div>
       </div>
+
+      <ConfirmDialog
+        open={pendingDeleteId !== null}
+        title="Delete this invoice?"
+        description="This permanently removes the invoice and cannot be undone."
+        confirmLabel="Delete Invoice"
+        destructive
+        busy={isDeleting}
+        onConfirm={performDeleteInvoice}
+        onCancel={() => setPendingDeleteId(null)}
+      />
     </main>
   );
 }

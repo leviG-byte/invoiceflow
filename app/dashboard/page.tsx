@@ -3,6 +3,19 @@
 import Link from "next/link";
 import { useEffect, useMemo, useState } from "react";
 import { createClient } from "@/lib/supabase/client";
+import { useToast } from "@/components/ui/Toast";
+import { StatCardSkeleton, CardSkeleton } from "@/components/ui/Skeleton";
+import {
+  Area,
+  AreaChart,
+  Bar,
+  BarChart,
+  CartesianGrid,
+  ResponsiveContainer,
+  Tooltip,
+  XAxis,
+  YAxis,
+} from "recharts";
 
 type DashboardInvoiceRow = {
   id: string;
@@ -53,17 +66,14 @@ function getStatusBadgeClasses(status: string) {
 
 export default function DashboardPage() {
   const supabase = useMemo(() => createClient(), []);
+  const { toast } = useToast();
 
   const [invoices, setInvoices] = useState<DashboardInvoiceRow[]>([]);
-  const [message, setMessage] = useState("");
   const [isLoading, setIsLoading] = useState(true);
   const [actionInvoiceId, setActionInvoiceId] = useState<string | null>(null);
 
   useEffect(() => {
     async function loadDashboard() {
-      setIsLoading(true);
-      setMessage("");
-
       const {
         data: { user },
         error: userError,
@@ -71,7 +81,6 @@ export default function DashboardPage() {
 
       if (userError || !user) {
         console.error("Dashboard user error:", userError);
-        setMessage("You must be logged in to view the dashboard.");
         setIsLoading(false);
         return;
       }
@@ -86,7 +95,7 @@ export default function DashboardPage() {
 
       if (error) {
         console.error("Dashboard invoices error:", error);
-        setMessage(error.message || "Could not load dashboard data.");
+        toast(error.message || "Could not load dashboard data.", "error");
         setIsLoading(false);
         return;
       }
@@ -96,11 +105,10 @@ export default function DashboardPage() {
     }
 
     loadDashboard();
-  }, [supabase]);
+  }, [supabase, toast]);
 
   async function handleStatusChange(invoiceId: string, newStatus: "Paid" | "Pending") {
     setActionInvoiceId(invoiceId);
-    setMessage("");
 
     const {
       data: { user },
@@ -109,7 +117,7 @@ export default function DashboardPage() {
 
     if (userError || !user) {
       console.error("Dashboard status user error:", userError);
-      setMessage("You must be logged in.");
+      toast("You must be logged in.", "error");
       setActionInvoiceId(null);
       return;
     }
@@ -122,7 +130,7 @@ export default function DashboardPage() {
 
     if (error) {
       console.error("Dashboard status update error:", error);
-      setMessage(error.message || "Could not update invoice status.");
+      toast(error.message || "Could not update invoice status.", "error");
       setActionInvoiceId(null);
       return;
     }
@@ -133,7 +141,7 @@ export default function DashboardPage() {
       )
     );
 
-    setMessage(`Invoice updated to ${newStatus}.`);
+    toast(`Invoice updated to ${newStatus}.`, "success");
     setActionInvoiceId(null);
   }
 
@@ -253,16 +261,6 @@ export default function DashboardPage() {
 
   const recentInvoices = useMemo(() => invoices.slice(0, 5), [invoices]);
 
-  const maxMonthlyRevenue = Math.max(
-    ...monthlyRevenue.map((item) => item.amount),
-    1
-  );
-
-  const maxYearlyRevenue = Math.max(
-    ...currentYearRevenue.map((item) => item.amount),
-    1
-  );
-
   const totalStatusCount =
     dashboardStats.paidCount +
     dashboardStats.pendingCount +
@@ -305,6 +303,15 @@ export default function DashboardPage() {
         </div>
 
         <div className="grid gap-4 border-t border-slate-200 bg-white px-5 py-5 sm:grid-cols-2 xl:grid-cols-4 sm:px-6 lg:px-8">
+          {isLoading ? (
+            <>
+              <StatCardSkeleton />
+              <StatCardSkeleton />
+              <StatCardSkeleton />
+              <StatCardSkeleton />
+            </>
+          ) : (
+            <>
           <div className="rounded-2xl border border-slate-200 bg-slate-50 p-5 transition hover:-translate-y-0.5 hover:bg-white hover:shadow-md">
             <p className="text-sm font-medium text-slate-500">Total Revenue</p>
             <p className="mt-2 text-3xl font-bold text-slate-950">
@@ -348,14 +355,10 @@ export default function DashboardPage() {
               {dashboardStats.overdueCount === 1 ? "" : "s"}
             </p>
           </div>
+            </>
+          )}
         </div>
       </div>
-
-      {message && (
-        <div className="rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-700 shadow-sm">
-          {message}
-        </div>
-      )}
 
       <div className="grid gap-6 xl:grid-cols-3">
         <div className="rounded-3xl border border-slate-200 bg-white p-6 shadow-sm xl:col-span-2">
@@ -369,41 +372,53 @@ export default function DashboardPage() {
           </div>
 
           {isLoading ? (
-            <p className="text-sm text-slate-500">Loading chart...</p>
+            <CardSkeleton lines={6} />
           ) : monthlyRevenue.every((item) => item.amount === 0) ? (
             <p className="text-sm text-slate-500">
               No revenue data yet for the last 6 months.
             </p>
           ) : (
-            <div className="flex h-72 items-end gap-4">
-              {monthlyRevenue.map((item) => {
-                const height = `${Math.max(
-                  (item.amount / maxMonthlyRevenue) * 100,
-                  item.amount > 0 ? 8 : 0
-                )}%`;
-
-                return (
-                  <div
-                    key={item.label}
-                    className="flex flex-1 flex-col items-center justify-end gap-3"
-                  >
-                    <div className="text-xs font-medium text-slate-500">
-                      ${item.amount.toFixed(0)}
-                    </div>
-
-                    <div className="flex h-56 w-full items-end rounded-2xl bg-slate-100 p-2">
-                      <div
-                        className="w-full rounded-xl bg-slate-900 transition-all"
-                        style={{ height }}
-                      />
-                    </div>
-
-                    <div className="text-sm font-medium text-slate-700">
-                      {item.label}
-                    </div>
-                  </div>
-                );
-              })}
+            <div className="h-72">
+              <ResponsiveContainer width="100%" height="100%">
+                <BarChart
+                  data={monthlyRevenue}
+                  margin={{ top: 10, right: 8, left: 0, bottom: 0 }}
+                >
+                  <CartesianGrid strokeDasharray="3 3" stroke="#e2e8f0" vertical={false} />
+                  <XAxis
+                    dataKey="label"
+                    tick={{ fontSize: 13, fill: "#64748b" }}
+                    axisLine={false}
+                    tickLine={false}
+                  />
+                  <YAxis
+                    tick={{ fontSize: 12, fill: "#94a3b8" }}
+                    axisLine={false}
+                    tickLine={false}
+                    tickFormatter={(value: number) => `$${value}`}
+                    width={60}
+                  />
+                  <Tooltip
+                    cursor={{ fill: "#f1f5f9" }}
+                    formatter={(value) => [
+                      `$${Number(value).toFixed(2)}`,
+                      "Revenue",
+                    ]}
+                    contentStyle={{
+                      borderRadius: 16,
+                      border: "1px solid #e2e8f0",
+                      boxShadow: "0 10px 30px rgba(2,6,23,0.08)",
+                      fontSize: 13,
+                    }}
+                  />
+                  <Bar
+                    dataKey="amount"
+                    fill="#0f172a"
+                    radius={[10, 10, 4, 4]}
+                    maxBarSize={56}
+                  />
+                </BarChart>
+              </ResponsiveContainer>
             </div>
           )}
         </div>
@@ -488,39 +503,61 @@ export default function DashboardPage() {
           </p>
 
           {isLoading ? (
-            <p className="mt-6 text-sm text-slate-500">Loading...</p>
+            <div className="mt-6">
+              <CardSkeleton lines={5} />
+            </div>
           ) : currentYearRevenue.every((item) => item.amount === 0) ? (
             <p className="mt-6 text-sm text-slate-500">
               No yearly revenue data yet.
             </p>
           ) : (
-            <div className="mt-6 space-y-4">
-              {currentYearRevenue.map((item) => {
-                const width =
-                  item.amount > 0
-                    ? `${(item.amount / maxYearlyRevenue) * 100}%`
-                    : "0%";
-
-                return (
-                  <div key={item.label}>
-                    <div className="mb-1 flex items-center justify-between text-sm">
-                      <span className="font-medium text-slate-700">
-                        {item.label}
-                      </span>
-                      <span className="font-semibold text-slate-900">
-                        ${item.amount.toFixed(2)}
-                      </span>
-                    </div>
-
-                    <div className="h-3 overflow-hidden rounded-full bg-slate-100">
-                      <div
-                        className="h-full rounded-full bg-blue-600"
-                        style={{ width }}
-                      />
-                    </div>
-                  </div>
-                );
-              })}
+            <div className="mt-6 h-72">
+              <ResponsiveContainer width="100%" height="100%">
+                <AreaChart
+                  data={currentYearRevenue}
+                  margin={{ top: 10, right: 8, left: 0, bottom: 0 }}
+                >
+                  <defs>
+                    <linearGradient id="yearRevenueFill" x1="0" y1="0" x2="0" y2="1">
+                      <stop offset="0%" stopColor="#2563eb" stopOpacity={0.25} />
+                      <stop offset="100%" stopColor="#2563eb" stopOpacity={0.02} />
+                    </linearGradient>
+                  </defs>
+                  <CartesianGrid strokeDasharray="3 3" stroke="#e2e8f0" vertical={false} />
+                  <XAxis
+                    dataKey="label"
+                    tick={{ fontSize: 12, fill: "#64748b" }}
+                    axisLine={false}
+                    tickLine={false}
+                  />
+                  <YAxis
+                    tick={{ fontSize: 12, fill: "#94a3b8" }}
+                    axisLine={false}
+                    tickLine={false}
+                    tickFormatter={(value: number) => `$${value}`}
+                    width={60}
+                  />
+                  <Tooltip
+                    formatter={(value) => [
+                      `$${Number(value).toFixed(2)}`,
+                      "Revenue",
+                    ]}
+                    contentStyle={{
+                      borderRadius: 16,
+                      border: "1px solid #e2e8f0",
+                      boxShadow: "0 10px 30px rgba(2,6,23,0.08)",
+                      fontSize: 13,
+                    }}
+                  />
+                  <Area
+                    type="monotone"
+                    dataKey="amount"
+                    stroke="#2563eb"
+                    strokeWidth={2.5}
+                    fill="url(#yearRevenueFill)"
+                  />
+                </AreaChart>
+              </ResponsiveContainer>
             </div>
           )}
         </div>
@@ -534,7 +571,9 @@ export default function DashboardPage() {
           </p>
 
           {isLoading ? (
-            <p className="mt-6 text-sm text-slate-500">Loading...</p>
+            <div className="mt-6">
+              <CardSkeleton lines={4} />
+            </div>
           ) : topClients.length === 0 ? (
             <p className="mt-6 text-sm text-slate-500">
               No client revenue data yet.
@@ -594,7 +633,7 @@ export default function DashboardPage() {
         </div>
 
         {isLoading ? (
-          <p className="text-sm text-slate-500">Loading invoices...</p>
+          <CardSkeleton lines={4} />
         ) : recentInvoices.length === 0 ? (
           <p className="text-sm text-slate-500">
             No invoices found yet. Create your first invoice to start tracking
