@@ -922,7 +922,7 @@ export default function NewInvoicePage() {
                       </button>
                     </div>
 
-                    <div className="grid gap-4 lg:grid-cols-2 2xl:grid-cols-5">
+                    <div className="grid grid-cols-2 gap-4 lg:grid-cols-4">
                       <select
                         value={getItemType(item)}
                         onChange={(e) =>
@@ -944,14 +944,8 @@ export default function NewInvoicePage() {
                         onChange={(e) =>
                           handleItemChange(index, "date", e.target.value)
                         }
+                        aria-label="Item date"
                         className="w-full min-w-0 rounded-2xl border border-slate-300 bg-white px-4 py-3 text-slate-900 outline-none transition focus:border-blue-500 focus:ring-4 focus:ring-blue-100"
-                      />
-
-                      <DescriptionField
-                        value={item.description}
-                        onChange={(value) =>
-                          handleItemChange(index, "description", value)
-                        }
                       />
 
                       {getItemType(item) === "fixed" ? (
@@ -964,7 +958,7 @@ export default function NewInvoicePage() {
                           onChange={(e) =>
                             handleItemChange(index, "amount", e.target.value)
                           }
-                          className="w-full min-w-0 rounded-2xl border border-slate-300 bg-white px-4 py-3 text-slate-900 placeholder-slate-400 outline-none transition focus:border-blue-500 focus:ring-4 focus:ring-blue-100 2xl:col-span-2"
+                          className="col-span-2 w-full min-w-0 rounded-2xl border border-slate-300 bg-white px-4 py-3 text-slate-900 placeholder-slate-400 outline-none transition focus:border-blue-500 focus:ring-4 focus:ring-blue-100"
                         />
                       ) : (
                         <>
@@ -993,6 +987,15 @@ export default function NewInvoicePage() {
                           />
                         </>
                       )}
+                    </div>
+
+                    <div className="mt-4 min-w-0">
+                      <DescriptionField
+                        value={item.description}
+                        onChange={(value) =>
+                          handleItemChange(index, "description", value)
+                        }
+                      />
                     </div>
                   </div>
                 ))}

@@ -628,7 +628,7 @@ export default function EditInvoicePage() {
                                 </button>
                               </div>
 
-                              <div className="grid gap-4 xl:grid-cols-[minmax(120px,0.8fr)_minmax(150px,1fr)_minmax(0,2.2fr)_minmax(110px,0.75fr)_minmax(120px,0.85fr)_minmax(140px,0.95fr)]">
+                              <div className="grid grid-cols-2 gap-4 xl:grid-cols-5">
                                 <div className="min-w-0">
                                   <label className="mb-2 block text-sm font-medium text-slate-700">
                                     Type
@@ -663,22 +663,6 @@ export default function EditInvoicePage() {
                                       )
                                     }
                                     className="w-full min-w-0 rounded-2xl border border-slate-200 bg-white px-4 py-3 text-slate-900 shadow-sm outline-none transition focus:border-blue-500 focus:ring-4 focus:ring-blue-100"
-                                  />
-                                </div>
-
-                                <div className="min-w-0">
-                                  <label className="mb-2 block text-sm font-medium text-slate-700">
-                                    Description
-                                  </label>
-                                  <DescriptionField
-                                    value={item.description}
-                                    onChange={(value) =>
-                                      handleItemChange(
-                                        index,
-                                        "description",
-                                        value
-                                      )
-                                    }
                                   />
                                 </div>
 
@@ -752,6 +736,18 @@ export default function EditInvoicePage() {
                                     </span>
                                   </div>
                                 </div>
+                              </div>
+
+                              <div className="mt-4 min-w-0">
+                                <label className="mb-2 block text-sm font-medium text-slate-700">
+                                  Description
+                                </label>
+                                <DescriptionField
+                                  value={item.description}
+                                  onChange={(value) =>
+                                    handleItemChange(index, "description", value)
+                                  }
+                                />
                               </div>
                             </div>
                           );
