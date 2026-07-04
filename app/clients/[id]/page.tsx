@@ -156,14 +156,14 @@ export default function ClientDetailPage() {
       <div className="space-y-6">
         <Link
           href="/clients"
-          className="inline-flex items-center gap-2 rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-sm font-medium text-slate-700 shadow-sm transition hover:border-slate-300 hover:bg-slate-50"
+          className="inline-flex items-center gap-2 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 px-4 py-2.5 text-sm font-medium text-slate-700 dark:text-slate-300 shadow-sm transition hover:border-slate-300 hover:bg-slate-50"
         >
           <ArrowLeft size={16} /> Back to Clients
         </Link>
 
-        <div className="rounded-3xl border border-slate-200 bg-white p-10 text-center shadow-sm">
-          <p className="text-lg font-semibold text-slate-900">Client not found</p>
-          <p className="mt-2 text-sm text-slate-600">
+        <div className="rounded-3xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 p-10 text-center shadow-sm">
+          <p className="text-lg font-semibold text-slate-900 dark:text-slate-100">Client not found</p>
+          <p className="mt-2 text-sm text-slate-600 dark:text-slate-400">
             This client may have been deleted, or the link is incorrect.
           </p>
         </div>
@@ -176,7 +176,7 @@ export default function ClientDetailPage() {
       <div className="flex flex-wrap items-center justify-between gap-3">
         <Link
           href="/clients"
-          className="inline-flex items-center gap-2 rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-sm font-medium text-slate-700 shadow-sm transition hover:border-slate-300 hover:bg-slate-50"
+          className="inline-flex items-center gap-2 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 px-4 py-2.5 text-sm font-medium text-slate-700 dark:text-slate-300 shadow-sm transition hover:border-slate-300 hover:bg-slate-50"
         >
           <ArrowLeft size={16} /> Back to Clients
         </Link>
@@ -190,7 +190,7 @@ export default function ClientDetailPage() {
       </div>
 
       {/* Client header */}
-      <div className="overflow-hidden rounded-3xl border border-slate-200 bg-white shadow-sm">
+      <div className="overflow-hidden rounded-3xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 shadow-sm">
         <div className="bg-gradient-to-r from-slate-950 via-slate-900 to-blue-950 px-5 py-6 sm:px-6 lg:px-8">
           <div className="flex flex-col gap-5 sm:flex-row sm:items-center">
             <div className="flex h-16 w-16 shrink-0 items-center justify-center rounded-3xl bg-white/10 text-xl font-bold text-white ring-1 ring-white/15">
@@ -223,34 +223,34 @@ export default function ClientDetailPage() {
           </div>
         </div>
 
-        <div className="grid gap-4 border-t border-slate-200 bg-white px-5 py-5 sm:grid-cols-2 xl:grid-cols-4 sm:px-6 lg:px-8">
-          <div className="rounded-2xl border border-slate-200 bg-slate-50 p-5">
-            <p className="text-sm font-medium text-slate-500">Total Billed</p>
-            <p className="mt-2 text-3xl font-bold text-slate-950">
+        <div className="grid gap-4 border-t border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 px-5 py-5 sm:grid-cols-2 xl:grid-cols-4 sm:px-6 lg:px-8">
+          <div className="rounded-2xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 p-5">
+            <p className="text-sm font-medium text-slate-500 dark:text-slate-400">Total Billed</p>
+            <p className="mt-2 text-3xl font-bold text-slate-950 dark:text-white">
               ${stats.totalBilled.toFixed(2)}
             </p>
-            <p className="mt-2 text-xs text-slate-500">
+            <p className="mt-2 text-xs text-slate-500 dark:text-slate-400">
               Across {invoices.length} invoice{invoices.length === 1 ? "" : "s"}
             </p>
           </div>
 
           <div className="rounded-2xl border border-amber-200 bg-amber-50/40 p-5">
-            <p className="text-sm font-medium text-slate-500">Outstanding</p>
+            <p className="text-sm font-medium text-slate-500 dark:text-slate-400">Outstanding</p>
             <p className="mt-2 text-3xl font-bold text-amber-600">
               ${stats.outstanding.toFixed(2)}
             </p>
-            <p className="mt-2 text-xs text-slate-500">Unpaid balance</p>
+            <p className="mt-2 text-xs text-slate-500 dark:text-slate-400">Unpaid balance</p>
           </div>
 
           <div className="rounded-2xl border border-green-200 bg-green-50/40 p-5">
-            <p className="text-sm font-medium text-slate-500">Paid Invoices</p>
+            <p className="text-sm font-medium text-slate-500 dark:text-slate-400">Paid Invoices</p>
             <p className="mt-2 text-3xl font-bold text-green-600">
               {stats.paidCount}
             </p>
           </div>
 
           <div className="rounded-2xl border border-red-200 bg-red-50/40 p-5">
-            <p className="text-sm font-medium text-slate-500">Overdue</p>
+            <p className="text-sm font-medium text-slate-500 dark:text-slate-400">Overdue</p>
             <p className="mt-2 text-3xl font-bold text-red-600">
               {stats.overdueCount}
             </p>
@@ -260,29 +260,29 @@ export default function ClientDetailPage() {
 
       {/* Payment defaults */}
       {(client.default_payment_method || client.default_payment_notes) && (
-        <div className="rounded-3xl border border-slate-200 bg-white p-6 shadow-sm">
-          <h2 className="text-lg font-semibold text-slate-950">
+        <div className="rounded-3xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 p-6 shadow-sm">
+          <h2 className="text-lg font-semibold text-slate-950 dark:text-white">
             Payment Defaults
           </h2>
 
           <div className="mt-4 grid gap-4 sm:grid-cols-2">
             {client.default_payment_method && (
-              <div className="rounded-2xl bg-slate-50 p-4">
-                <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">
+              <div className="rounded-2xl bg-slate-50 dark:bg-slate-800 p-4">
+                <p className="text-xs font-semibold uppercase tracking-wide text-slate-500 dark:text-slate-400">
                   Method
                 </p>
-                <p className="mt-1 text-sm text-slate-800">
+                <p className="mt-1 text-sm text-slate-800 dark:text-slate-200">
                   {client.default_payment_method}
                 </p>
               </div>
             )}
 
             {client.default_payment_notes && (
-              <div className="rounded-2xl bg-slate-50 p-4">
-                <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">
+              <div className="rounded-2xl bg-slate-50 dark:bg-slate-800 p-4">
+                <p className="text-xs font-semibold uppercase tracking-wide text-slate-500 dark:text-slate-400">
                   Notes
                 </p>
-                <p className="mt-1 whitespace-pre-wrap text-sm text-slate-800">
+                <p className="mt-1 whitespace-pre-wrap text-sm text-slate-800 dark:text-slate-200">
                   {client.default_payment_notes}
                 </p>
               </div>
@@ -292,12 +292,12 @@ export default function ClientDetailPage() {
       )}
 
       {/* Invoice history */}
-      <div className="rounded-3xl border border-slate-200 bg-white shadow-sm">
-        <div className="border-b border-slate-200 px-5 py-4 sm:px-6">
-          <h2 className="text-lg font-semibold text-slate-950">
+      <div className="rounded-3xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 shadow-sm">
+        <div className="border-b border-slate-200 dark:border-slate-700 px-5 py-4 sm:px-6">
+          <h2 className="text-lg font-semibold text-slate-950 dark:text-white">
             Invoice History
           </h2>
-          <p className="mt-1 text-sm text-slate-500">
+          <p className="mt-1 text-sm text-slate-500 dark:text-slate-400">
             Every invoice billed to {client.name}.
           </p>
         </div>
@@ -305,10 +305,10 @@ export default function ClientDetailPage() {
         {invoices.length === 0 ? (
           <div className="p-10 text-center">
             <FileText className="mx-auto text-slate-300" size={36} />
-            <p className="mt-3 text-base font-semibold text-slate-900">
+            <p className="mt-3 text-base font-semibold text-slate-900 dark:text-slate-100">
               No invoices yet
             </p>
-            <p className="mt-1 text-sm text-slate-600">
+            <p className="mt-1 text-sm text-slate-600 dark:text-slate-400">
               Create the first invoice for this client to start tracking.
             </p>
           </div>
@@ -324,17 +324,17 @@ export default function ClientDetailPage() {
                   className="flex flex-wrap items-center justify-between gap-3 px-5 py-4 transition hover:bg-slate-50 sm:px-6"
                 >
                   <div className="min-w-0">
-                    <p className="font-semibold text-slate-950">
+                    <p className="font-semibold text-slate-950 dark:text-white">
                       {invoice.invoiceNumber}
                     </p>
-                    <p className="mt-0.5 text-sm text-slate-500">
+                    <p className="mt-0.5 text-sm text-slate-500 dark:text-slate-400">
                       {invoice.issueDate || "No issue date"}
                       {invoice.dueDate ? ` · Due ${invoice.dueDate}` : ""}
                     </p>
                   </div>
 
                   <div className="flex items-center gap-3">
-                    <span className="text-sm font-bold text-slate-950">
+                    <span className="text-sm font-bold text-slate-950 dark:text-white">
                       ${invoice.total.toFixed(2)}
                     </span>
                     <span

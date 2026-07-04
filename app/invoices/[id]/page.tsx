@@ -5,9 +5,12 @@ import { useParams, useSearchParams } from "next/navigation";
 import { useEffect, useMemo, useState } from "react";
 import { createClient } from "@/lib/supabase/client";
 import { generateInvoicePdf } from "@/lib/generate-invoice-pdf";
+import { generateReceiptPdf } from "@/lib/generate-receipt-pdf";
 import {
+  DEFAULT_ACCENT,
   InvoiceItem,
   SavedInvoice,
+  accentTextColor,
   calculateInvoiceTotals,
   getDisplayStatus,
   getItemAmount,
@@ -23,6 +26,7 @@ import {
   Pencil,
   Send,
   BellRing,
+  ReceiptText,
 } from "lucide-react";
 
 type DatabaseInvoiceRow = {
@@ -58,6 +62,9 @@ type BusinessProfile = {
   phone: string;
   address: string;
   logoUrl?: string;
+  accentColor?: string;
+  logoPosition?: "left" | "center";
+  showItemDates?: boolean;
 };
 
 type DatabaseBusinessProfileRow = {
@@ -68,6 +75,9 @@ type DatabaseBusinessProfileRow = {
   phone: string | null;
   address: string | null;
   logo_url: string | null;
+  accent_color: string | null;
+  logo_position: string | null;
+  show_item_dates: boolean | null;
 };
 
 type InvoiceDetail = SavedInvoice & {
@@ -192,6 +202,9 @@ export default function InvoiceDetailPage() {
           phone: profile.phone || "",
           address: profile.address || "",
           logoUrl: profile.logo_url || "",
+          accentColor: profile.accent_color || undefined,
+          logoPosition: profile.logo_position === "center" ? "center" : "left",
+          showItemDates: profile.show_item_dates !== false,
         });
       }
 
@@ -217,6 +230,16 @@ export default function InvoiceDetailPage() {
     } catch (error) {
       console.error(error);
       toast("There was a problem generating the PDF.", "error");
+    }
+  }
+
+  async function handleDownloadReceipt(currentInvoice: InvoiceDetail) {
+    try {
+      const pdf = await generateReceiptPdf(currentInvoice, businessProfile);
+      pdf.save(`Receipt-${currentInvoice.invoiceNumber}.pdf`);
+    } catch (error) {
+      console.error(error);
+      toast("There was a problem generating the receipt.", "error");
     }
   }
 
@@ -295,7 +318,7 @@ export default function InvoiceDetailPage() {
   if (!invoice) {
     return (
       <div className="mx-auto max-w-4xl">
-        <div className="overflow-hidden rounded-3xl border border-slate-200 bg-white shadow-sm">
+        <div className="overflow-hidden rounded-3xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 shadow-sm">
           <div className="bg-gradient-to-r from-slate-950 via-slate-900 to-blue-950 px-5 py-6 sm:px-6 lg:px-8">
             <div className="flex flex-col gap-4">
               <Link
@@ -332,9 +355,21 @@ export default function InvoiceDetailPage() {
   const allFixed =
     invoice.items.length > 0 &&
     invoice.items.every((item) => getItemType(item) === "fixed");
+
+  const showDates = businessProfile.showItemDates !== false;
+  const isCenter = businessProfile.logoPosition === "center";
+  const hasCustomAccent = !!businessProfile.accentColor;
+  const accent = businessProfile.accentColor || DEFAULT_ACCENT;
+  const accentText = accentTextColor(accent);
+
+  // Full literal class strings (Tailwind must see them statically).
   const itemGridCols = allFixed
-    ? "grid-cols-[110px_minmax(0,1fr)_110px]"
-    : "grid-cols-[110px_minmax(0,1fr)_90px_110px_110px]";
+    ? showDates
+      ? "grid-cols-[110px_minmax(0,1fr)_110px]"
+      : "grid-cols-[minmax(0,1fr)_110px]"
+    : showDates
+    ? "grid-cols-[110px_minmax(0,1fr)_90px_110px_110px]"
+    : "grid-cols-[minmax(0,1fr)_90px_110px_110px]";
 
   return (
     <div className="mx-auto max-w-4xl space-y-6">
@@ -342,7 +377,7 @@ export default function InvoiceDetailPage() {
       <div className="flex flex-wrap items-center justify-between gap-3">
         <Link
           href="/invoices"
-          className="inline-flex items-center gap-2 rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-sm font-medium text-slate-700 shadow-sm transition hover:border-slate-300 hover:bg-slate-50"
+          className="inline-flex items-center gap-2 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 px-4 py-2.5 text-sm font-medium text-slate-700 dark:text-slate-300 shadow-sm transition hover:border-slate-300 hover:bg-slate-50"
         >
           <ArrowLeft size={16} /> Back to Invoices
         </Link>
@@ -350,17 +385,26 @@ export default function InvoiceDetailPage() {
         <div className="flex flex-wrap gap-2">
           <Link
             href={`/invoices/${id}/edit`}
-            className="inline-flex items-center gap-2 rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-sm font-semibold text-slate-800 shadow-sm transition hover:border-slate-300 hover:bg-slate-50"
+            className="inline-flex items-center gap-2 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 px-4 py-2.5 text-sm font-semibold text-slate-800 dark:text-slate-200 shadow-sm transition hover:border-slate-300 hover:bg-slate-50"
           >
             <Pencil size={15} /> Edit
           </Link>
 
           <button
             onClick={() => handleDownloadPDF(invoice)}
-            className="inline-flex items-center gap-2 rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-sm font-semibold text-slate-800 shadow-sm transition hover:border-slate-300 hover:bg-slate-50"
+            className="inline-flex items-center gap-2 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 px-4 py-2.5 text-sm font-semibold text-slate-800 dark:text-slate-200 shadow-sm transition hover:border-slate-300 hover:bg-slate-50"
           >
             <Download size={15} /> PDF
           </button>
+
+          {isPaid && (
+            <button
+              onClick={() => handleDownloadReceipt(invoice)}
+              className="inline-flex items-center gap-2 rounded-xl border border-emerald-200 bg-emerald-50 px-4 py-2.5 text-sm font-semibold text-emerald-700 shadow-sm transition hover:bg-emerald-100"
+            >
+              <ReceiptText size={15} /> Receipt
+            </button>
+          )}
 
           {isOverdue && (
             <button
@@ -385,9 +429,13 @@ export default function InvoiceDetailPage() {
       </div>
 
       {/* The invoice document */}
-      <div className="relative overflow-hidden rounded-3xl border border-slate-200 bg-white shadow-sm">
+      <div className="relative overflow-hidden rounded-3xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 shadow-sm">
         {/* Top accent */}
-        <div className="h-2 bg-gradient-to-r from-slate-950 via-blue-800 to-blue-500" />
+        {hasCustomAccent ? (
+          <div className="h-2" style={{ background: accent }} />
+        ) : (
+          <div className="h-2 bg-gradient-to-r from-slate-950 via-blue-800 to-blue-500" />
+        )}
 
         {isPaid && (
           <div className="pointer-events-none absolute right-6 top-10 rotate-12 rounded-xl border-4 border-emerald-500/70 px-4 py-1.5 text-xl font-black uppercase tracking-widest text-emerald-500/70 sm:right-12 sm:top-14">
@@ -403,8 +451,14 @@ export default function InvoiceDetailPage() {
 
         <div className="p-6 sm:p-10">
           {/* Letterhead */}
-          <div className="flex flex-col gap-6 border-b border-slate-200 pb-8 sm:flex-row sm:items-start sm:justify-between">
-            <div className="min-w-0">
+          <div
+            className={`flex flex-col gap-6 border-b border-slate-200 dark:border-slate-700 pb-8 ${
+              isCenter
+                ? "items-center text-center"
+                : "sm:flex-row sm:items-start sm:justify-between"
+            }`}
+          >
+            <div className={`min-w-0 ${isCenter ? "flex flex-col items-center" : ""}`}>
               {businessProfile.logoUrl ? (
                 // eslint-disable-next-line @next/next/no-img-element
                 <img
@@ -413,29 +467,38 @@ export default function InvoiceDetailPage() {
                   className="mb-4 max-h-16 max-w-[200px] object-contain"
                 />
               ) : (
-                <div className="mb-4 flex h-12 w-12 items-center justify-center rounded-2xl bg-slate-950">
-                  <span className="text-base font-bold text-white">
+                <div
+                  className="mb-4 flex h-12 w-12 items-center justify-center rounded-2xl"
+                  style={{ background: accent }}
+                >
+                  <span
+                    className="text-base font-bold"
+                    style={{ color: accentText }}
+                  >
                     {(businessProfile.businessName || "IF").slice(0, 2).toUpperCase()}
                   </span>
                 </div>
               )}
 
-              <h2 className="text-xl font-bold text-slate-950">
+              <h2 className="text-xl font-bold text-slate-950 dark:text-white">
                 {businessProfile.businessName || "InvoiceFlow"}
               </h2>
 
-              <div className="mt-2 space-y-0.5 text-sm text-slate-500">
+              <div className="mt-2 space-y-0.5 text-sm text-slate-500 dark:text-slate-400">
                 {businessProfile.email && <p>{businessProfile.email}</p>}
                 {businessProfile.phone && <p>{businessProfile.phone}</p>}
                 {businessProfile.address && <p>{businessProfile.address}</p>}
               </div>
             </div>
 
-            <div className="text-left sm:text-right">
-              <p className="text-3xl font-black uppercase tracking-tight text-slate-950 sm:text-4xl">
+            <div className={isCenter ? "text-center" : "text-left sm:text-right"}>
+              <p
+                className="text-3xl font-black uppercase tracking-tight sm:text-4xl"
+                style={{ color: hasCustomAccent ? accent : "#0f172a" }}
+              >
                 Invoice
               </p>
-              <p className="mt-1 font-mono text-sm font-semibold text-slate-500">
+              <p className="mt-1 font-mono text-sm font-semibold text-slate-500 dark:text-slate-400">
                 {invoice.invoiceNumber}
               </p>
 
@@ -450,16 +513,16 @@ export default function InvoiceDetailPage() {
           </div>
 
           {/* Bill To + dates */}
-          <div className="grid gap-6 border-b border-slate-200 py-8 sm:grid-cols-2">
+          <div className="grid gap-6 border-b border-slate-200 dark:border-slate-700 py-8 sm:grid-cols-2">
             <div>
               <p className="text-xs font-semibold uppercase tracking-widest text-slate-400">
                 Billed To
               </p>
-              <p className="mt-2 text-xl font-semibold text-slate-950">
+              <p className="mt-2 text-xl font-semibold text-slate-950 dark:text-white">
                 {invoice.clientName}
               </p>
               {invoice.clientEmail && (
-                <p className="mt-1 text-sm text-slate-500">{invoice.clientEmail}</p>
+                <p className="mt-1 text-sm text-slate-500 dark:text-slate-400">{invoice.clientEmail}</p>
               )}
             </div>
 
@@ -468,7 +531,7 @@ export default function InvoiceDetailPage() {
                 <p className="text-xs font-semibold uppercase tracking-widest text-slate-400">
                   Issue Date
                 </p>
-                <p className="mt-1 text-sm font-semibold text-slate-900">
+                <p className="mt-1 text-sm font-semibold text-slate-900 dark:text-slate-100">
                   {formatDisplayDate(invoice.issueDate)}
                 </p>
               </div>
@@ -479,7 +542,7 @@ export default function InvoiceDetailPage() {
                 </p>
                 <p
                   className={`mt-1 text-sm font-semibold ${
-                    isOverdue ? "text-red-600" : "text-slate-900"
+                    isOverdue ? "text-red-600" : "text-slate-900 dark:text-slate-100"
                   }`}
                 >
                   {formatDisplayDate(invoice.dueDate)}
@@ -491,7 +554,7 @@ export default function InvoiceDetailPage() {
                   <p className="text-xs font-semibold uppercase tracking-widest text-slate-400">
                     Payment Method
                   </p>
-                  <p className="mt-1 text-sm font-semibold text-slate-900">
+                  <p className="mt-1 text-sm font-semibold text-slate-900 dark:text-slate-100">
                     {invoice.paymentMethod}
                   </p>
                 </div>
@@ -513,9 +576,9 @@ export default function InvoiceDetailPage() {
           {/* Items table */}
           <div className="py-8">
             <div
-              className={`hidden ${itemGridCols} gap-3 border-b border-slate-200 pb-3 text-xs font-semibold uppercase tracking-widest text-slate-400 md:grid`}
+              className={`hidden ${itemGridCols} gap-3 border-b border-slate-200 dark:border-slate-700 pb-3 text-xs font-semibold uppercase tracking-widest text-slate-400 md:grid`}
             >
-              <p>Date</p>
+              {showDates && <p>Date</p>}
               <p>Description</p>
               {!allFixed && <p className="text-right">Hours</p>}
               {!allFixed && <p className="text-right">Rate</p>}
@@ -530,15 +593,17 @@ export default function InvoiceDetailPage() {
                 return (
                   <div
                     key={index}
-                    className={`grid ${itemGridCols} gap-3 border-b border-slate-100 py-4 text-sm text-slate-700`}
+                    className={`grid ${itemGridCols} gap-3 border-b border-slate-100 dark:border-slate-800 py-4 text-sm text-slate-700 dark:text-slate-300`}
                   >
-                    <p className="text-slate-500">
-                      {item.date ? formatDisplayDate(item.date) : "—"}
-                    </p>
-                    <p className="whitespace-pre-line break-words font-medium text-slate-900">
+                    {showDates && (
+                      <p className="text-slate-500 dark:text-slate-400">
+                        {item.date ? formatDisplayDate(item.date) : "—"}
+                      </p>
+                    )}
+                    <p className="whitespace-pre-line break-words font-medium text-slate-900 dark:text-slate-100">
                       {item.description}
                       {isFixed && !allFixed && (
-                        <span className="ml-2 rounded-md bg-slate-100 px-1.5 py-0.5 text-[11px] font-semibold uppercase tracking-wide text-slate-500">
+                        <span className="ml-2 rounded-md bg-slate-100 dark:bg-slate-950 px-1.5 py-0.5 text-[11px] font-semibold uppercase tracking-wide text-slate-500 dark:text-slate-400">
                           Flat fee
                         </span>
                       )}
@@ -551,7 +616,7 @@ export default function InvoiceDetailPage() {
                         {isFixed ? "—" : `$${Number(item.rate).toFixed(2)}`}
                       </p>
                     )}
-                    <p className="text-right font-semibold text-slate-950">
+                    <p className="text-right font-semibold text-slate-950 dark:text-white">
                       ${amount.toFixed(2)}
                     </p>
                   </div>
@@ -568,18 +633,18 @@ export default function InvoiceDetailPage() {
                 return (
                   <div
                     key={index}
-                    className="rounded-2xl border border-slate-200 bg-slate-50 p-4"
+                    className="rounded-2xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 p-4"
                   >
                     <div className="flex items-start justify-between gap-3">
-                      <p className="min-w-0 break-words text-sm font-medium text-slate-900">
+                      <p className="min-w-0 break-words text-sm font-medium text-slate-900 dark:text-slate-100">
                         {item.description}
                       </p>
-                      <p className="shrink-0 text-sm font-bold text-slate-950">
+                      <p className="shrink-0 text-sm font-bold text-slate-950 dark:text-white">
                         ${amount.toFixed(2)}
                       </p>
                     </div>
 
-                    <p className="mt-2 text-xs text-slate-500">
+                    <p className="mt-2 text-xs text-slate-500 dark:text-slate-400">
                       {item.date ? formatDisplayDate(item.date) : "—"}
                       {isFixed
                         ? " · Flat fee"
@@ -595,7 +660,7 @@ export default function InvoiceDetailPage() {
               <div className="w-full max-w-xs space-y-2 text-sm">
                 {hasBreakdown && (
                   <>
-                    <div className="flex justify-between text-slate-600">
+                    <div className="flex justify-between text-slate-600 dark:text-slate-400">
                       <span>Subtotal</span>
                       <span>${totals.subtotal.toFixed(2)}</span>
                     </div>
@@ -608,7 +673,7 @@ export default function InvoiceDetailPage() {
                     )}
 
                     {totals.taxAmount > 0 && (
-                      <div className="flex justify-between text-slate-600">
+                      <div className="flex justify-between text-slate-600 dark:text-slate-400">
                         <span>Tax ({invoice.taxRate}%)</span>
                         <span>${totals.taxAmount.toFixed(2)}</span>
                       </div>
@@ -616,8 +681,11 @@ export default function InvoiceDetailPage() {
                   </>
                 )}
 
-                <div className="flex items-center justify-between rounded-2xl bg-slate-950 px-5 py-4 text-white">
-                  <span className="text-sm font-medium text-slate-300">
+                <div
+                  className="flex items-center justify-between rounded-2xl px-5 py-4"
+                  style={{ background: accent, color: accentText }}
+                >
+                  <span className="text-sm font-medium opacity-80">
                     Total Due
                   </span>
                   <span className="text-2xl font-bold">
@@ -630,11 +698,11 @@ export default function InvoiceDetailPage() {
 
           {/* Payment notes */}
           {invoice.paymentNotes && (
-            <div className="rounded-2xl border border-slate-200 bg-slate-50 p-5">
+            <div className="rounded-2xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 p-5">
               <p className="text-xs font-semibold uppercase tracking-widest text-slate-400">
                 Payment Notes
               </p>
-              <p className="mt-2 whitespace-pre-line text-sm leading-6 text-slate-700">
+              <p className="mt-2 whitespace-pre-line text-sm leading-6 text-slate-700 dark:text-slate-300">
                 {invoice.paymentNotes}
               </p>
             </div>

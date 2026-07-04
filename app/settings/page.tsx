@@ -4,8 +4,10 @@ import { createClient } from "@/lib/supabase/client";
 import { useEffect, useMemo, useState } from "react";
 import { useToast } from "@/components/ui/Toast";
 import { CardSkeleton } from "@/components/ui/Skeleton";
+import AccountSettings from "@/components/AccountSettings";
 
 type InvoiceFormat = "hourly" | "fixed";
+type LogoPosition = "left" | "center";
 
 type BusinessProfile = {
   id?: string;
@@ -15,6 +17,9 @@ type BusinessProfile = {
   address: string;
   logoUrl?: string;
   defaultItemType: InvoiceFormat;
+  accentColor: string;
+  logoPosition: LogoPosition;
+  showItemDates: boolean;
 };
 
 type DatabaseBusinessProfile = {
@@ -26,7 +31,21 @@ type DatabaseBusinessProfile = {
   address: string | null;
   logo_url: string | null;
   default_item_type: string | null;
+  accent_color: string | null;
+  logo_position: string | null;
+  show_item_dates: boolean | null;
 };
+
+const ACCENT_SWATCHES = [
+  "#0f172a",
+  "#2563eb",
+  "#0ea5e9",
+  "#059669",
+  "#7c3aed",
+  "#db2777",
+  "#ea580c",
+  "#b91c1c",
+];
 
 export default function SettingsPage() {
   const supabase = useMemo(() => createClient(), []);
@@ -39,6 +58,9 @@ export default function SettingsPage() {
     address: "",
     logoUrl: "",
     defaultItemType: "hourly",
+    accentColor: "#0f172a",
+    logoPosition: "left",
+    showItemDates: true,
   });
 
   const [logoFile, setLogoFile] = useState<File | null>(null);
@@ -87,6 +109,9 @@ export default function SettingsPage() {
           logoUrl: profile.logo_url || "",
           defaultItemType:
             profile.default_item_type === "fixed" ? "fixed" : "hourly",
+          accentColor: profile.accent_color || "#0f172a",
+          logoPosition: profile.logo_position === "center" ? "center" : "left",
+          showItemDates: profile.show_item_dates !== false,
         });
       }
 
@@ -165,6 +190,9 @@ export default function SettingsPage() {
           address: businessProfile.address,
           logo_url: logoUrl,
           default_item_type: businessProfile.defaultItemType,
+          accent_color: businessProfile.accentColor,
+          logo_position: businessProfile.logoPosition,
+          show_item_dates: businessProfile.showItemDates,
         })
         .eq("id", businessProfile.id)
         .eq("user_id", user.id);
@@ -199,6 +227,9 @@ export default function SettingsPage() {
           address: businessProfile.address,
           logo_url: logoUrl,
           default_item_type: businessProfile.defaultItemType,
+          accent_color: businessProfile.accentColor,
+          logo_position: businessProfile.logoPosition,
+          show_item_dates: businessProfile.showItemDates,
         },
       ])
       .select("id")
@@ -237,7 +268,7 @@ export default function SettingsPage() {
 
   return (
     <div className="space-y-6">
-      <div className="overflow-hidden rounded-3xl border border-slate-200 bg-white shadow-sm">
+      <div className="overflow-hidden rounded-3xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 shadow-sm">
         <div className="bg-gradient-to-r from-slate-950 via-slate-900 to-blue-950 px-5 py-6 sm:px-6 lg:px-8">
           <div className="flex flex-col gap-5 lg:flex-row lg:items-end lg:justify-between">
             <div className="min-w-0">
@@ -262,31 +293,31 @@ export default function SettingsPage() {
           </div>
         </div>
 
-        <div className="grid gap-4 border-t border-slate-200 bg-white px-5 py-5 sm:grid-cols-2 xl:grid-cols-4 sm:px-6 lg:px-8">
-          <div className="rounded-2xl border border-slate-200 bg-slate-50 p-5 transition hover:-translate-y-0.5 hover:bg-white hover:shadow-md">
-            <p className="text-sm font-medium text-slate-500">Business Name</p>
-            <p className="mt-2 text-lg font-bold text-slate-950">
+        <div className="grid gap-4 border-t border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 px-5 py-5 sm:grid-cols-2 xl:grid-cols-4 sm:px-6 lg:px-8">
+          <div className="rounded-2xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 p-5 transition hover:-translate-y-0.5 hover:bg-white hover:shadow-md">
+            <p className="text-sm font-medium text-slate-500 dark:text-slate-400">Business Name</p>
+            <p className="mt-2 text-lg font-bold text-slate-950 dark:text-white">
               {businessProfile.businessName || "Not set"}
             </p>
           </div>
 
-          <div className="rounded-2xl border border-slate-200 bg-slate-50 p-5 transition hover:-translate-y-0.5 hover:bg-white hover:shadow-md">
-            <p className="text-sm font-medium text-slate-500">Email</p>
-            <p className="mt-2 text-lg font-bold text-slate-950 break-words">
+          <div className="rounded-2xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 p-5 transition hover:-translate-y-0.5 hover:bg-white hover:shadow-md">
+            <p className="text-sm font-medium text-slate-500 dark:text-slate-400">Email</p>
+            <p className="mt-2 text-lg font-bold text-slate-950 dark:text-white break-words">
               {businessProfile.email || "Not set"}
             </p>
           </div>
 
-          <div className="rounded-2xl border border-slate-200 bg-slate-50 p-5 transition hover:-translate-y-0.5 hover:bg-white hover:shadow-md">
-            <p className="text-sm font-medium text-slate-500">Phone</p>
-            <p className="mt-2 text-lg font-bold text-slate-950">
+          <div className="rounded-2xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 p-5 transition hover:-translate-y-0.5 hover:bg-white hover:shadow-md">
+            <p className="text-sm font-medium text-slate-500 dark:text-slate-400">Phone</p>
+            <p className="mt-2 text-lg font-bold text-slate-950 dark:text-white">
               {businessProfile.phone || "Not set"}
             </p>
           </div>
 
-          <div className="rounded-2xl border border-slate-200 bg-slate-50 p-5 transition hover:-translate-y-0.5 hover:bg-white hover:shadow-md">
-            <p className="text-sm font-medium text-slate-500">Logo</p>
-            <p className="mt-2 text-lg font-bold text-slate-950">
+          <div className="rounded-2xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 p-5 transition hover:-translate-y-0.5 hover:bg-white hover:shadow-md">
+            <p className="text-sm font-medium text-slate-500 dark:text-slate-400">Logo</p>
+            <p className="mt-2 text-lg font-bold text-slate-950 dark:text-white">
               {displayedLogo ? "Uploaded" : "Not set"}
             </p>
           </div>
@@ -294,16 +325,16 @@ export default function SettingsPage() {
       </div>
 
       <div className="grid gap-6 xl:grid-cols-[minmax(0,1.2fr)_380px]">
-        <div className="rounded-3xl border border-slate-200 bg-white p-6 shadow-sm">
+        <div className="rounded-3xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 p-6 shadow-sm">
           {isLoading ? (
             <CardSkeleton lines={6} />
           ) : (
             <>
               <div className="mb-6">
-                <h2 className="text-xl font-semibold text-slate-900">
+                <h2 className="text-xl font-semibold text-slate-900 dark:text-slate-100">
                   Business Profile
                 </h2>
-                <p className="mt-1 text-sm text-slate-500">
+                <p className="mt-1 text-sm text-slate-500 dark:text-slate-400">
                   This information appears across your app and can be used in your
                   invoices and exported PDFs.
                 </p>
@@ -311,7 +342,7 @@ export default function SettingsPage() {
 
               <div className="grid gap-5 md:grid-cols-2">
                 <div>
-                  <label className="mb-2 block text-sm font-semibold text-slate-800">
+                  <label className="mb-2 block text-sm font-semibold text-slate-800 dark:text-slate-200">
                     Business Name
                   </label>
                   <input
@@ -323,12 +354,12 @@ export default function SettingsPage() {
                         businessName: e.target.value,
                       }))
                     }
-                    className="w-full rounded-2xl border border-slate-300 bg-white px-4 py-3 text-slate-900 outline-none transition focus:border-blue-500 focus:ring-4 focus:ring-blue-100"
+                    className="w-full rounded-2xl border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-900 px-4 py-3 text-slate-900 dark:text-slate-100 outline-none transition focus:border-blue-500 focus:ring-4 focus:ring-blue-100"
                   />
                 </div>
 
                 <div>
-                  <label className="mb-2 block text-sm font-semibold text-slate-800">
+                  <label className="mb-2 block text-sm font-semibold text-slate-800 dark:text-slate-200">
                     Email
                   </label>
                   <input
@@ -340,12 +371,12 @@ export default function SettingsPage() {
                         email: e.target.value,
                       }))
                     }
-                    className="w-full rounded-2xl border border-slate-300 bg-white px-4 py-3 text-slate-900 outline-none transition focus:border-blue-500 focus:ring-4 focus:ring-blue-100"
+                    className="w-full rounded-2xl border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-900 px-4 py-3 text-slate-900 dark:text-slate-100 outline-none transition focus:border-blue-500 focus:ring-4 focus:ring-blue-100"
                   />
                 </div>
 
                 <div>
-                  <label className="mb-2 block text-sm font-semibold text-slate-800">
+                  <label className="mb-2 block text-sm font-semibold text-slate-800 dark:text-slate-200">
                     Phone
                   </label>
                   <input
@@ -357,12 +388,12 @@ export default function SettingsPage() {
                         phone: e.target.value,
                       }))
                     }
-                    className="w-full rounded-2xl border border-slate-300 bg-white px-4 py-3 text-slate-900 outline-none transition focus:border-blue-500 focus:ring-4 focus:ring-blue-100"
+                    className="w-full rounded-2xl border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-900 px-4 py-3 text-slate-900 dark:text-slate-100 outline-none transition focus:border-blue-500 focus:ring-4 focus:ring-blue-100"
                   />
                 </div>
 
                 <div>
-                  <label className="mb-2 block text-sm font-semibold text-slate-800">
+                  <label className="mb-2 block text-sm font-semibold text-slate-800 dark:text-slate-200">
                     Address
                   </label>
                   <input
@@ -374,16 +405,16 @@ export default function SettingsPage() {
                         address: e.target.value,
                       }))
                     }
-                    className="w-full rounded-2xl border border-slate-300 bg-white px-4 py-3 text-slate-900 outline-none transition focus:border-blue-500 focus:ring-4 focus:ring-blue-100"
+                    className="w-full rounded-2xl border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-900 px-4 py-3 text-slate-900 dark:text-slate-100 outline-none transition focus:border-blue-500 focus:ring-4 focus:ring-blue-100"
                   />
                 </div>
               </div>
 
               <div className="mt-8">
-                <label className="mb-2 block text-sm font-semibold text-slate-800">
+                <label className="mb-2 block text-sm font-semibold text-slate-800 dark:text-slate-200">
                   Invoice Format
                 </label>
-                <p className="mb-4 text-sm text-slate-500">
+                <p className="mb-4 text-sm text-slate-500 dark:text-slate-400">
                   Choose how new invoice line items are billed by default. You
                   can still switch any individual item while creating an
                   invoice.
@@ -401,13 +432,13 @@ export default function SettingsPage() {
                     className={`rounded-2xl border p-5 text-left transition ${
                       businessProfile.defaultItemType === "hourly"
                         ? "border-blue-500 bg-blue-50 ring-4 ring-blue-100"
-                        : "border-slate-200 bg-white hover:border-slate-300"
+                        : "border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 hover:border-slate-300"
                     }`}
                   >
-                    <p className="font-semibold text-slate-950">
+                    <p className="font-semibold text-slate-950 dark:text-white">
                       Hourly billing
                     </p>
-                    <p className="mt-1 text-sm text-slate-600">
+                    <p className="mt-1 text-sm text-slate-600 dark:text-slate-400">
                       Items track a date, hours worked, and an hourly rate.
                       Best for time-based work.
                     </p>
@@ -424,13 +455,13 @@ export default function SettingsPage() {
                     className={`rounded-2xl border p-5 text-left transition ${
                       businessProfile.defaultItemType === "fixed"
                         ? "border-blue-500 bg-blue-50 ring-4 ring-blue-100"
-                        : "border-slate-200 bg-white hover:border-slate-300"
+                        : "border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 hover:border-slate-300"
                     }`}
                   >
-                    <p className="font-semibold text-slate-950">
+                    <p className="font-semibold text-slate-950 dark:text-white">
                       Flat rate per item
                     </p>
-                    <p className="mt-1 text-sm text-slate-600">
+                    <p className="mt-1 text-sm text-slate-600 dark:text-slate-400">
                       Items have a description and a fixed price. Best for
                       products, packages, and project pricing.
                     </p>
@@ -438,12 +469,12 @@ export default function SettingsPage() {
                 </div>
               </div>
 
-              <div className="mt-8 rounded-2xl border border-slate-200 bg-slate-50 p-5">
-                <label className="mb-2 block text-sm font-semibold text-slate-800">
+              <div className="mt-8 rounded-2xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 p-5">
+                <label className="mb-2 block text-sm font-semibold text-slate-800 dark:text-slate-200">
                   Business Logo
                 </label>
 
-                <p className="mb-4 text-sm text-slate-500">
+                <p className="mb-4 text-sm text-slate-500 dark:text-slate-400">
                   Upload a logo to strengthen your brand identity on invoices and
                   PDF exports.
                 </p>
@@ -469,14 +500,14 @@ export default function SettingsPage() {
                     Upload Logo
                   </label>
 
-                  <span className="break-words text-sm text-slate-600">
+                  <span className="break-words text-sm text-slate-600 dark:text-slate-400">
                     {logoFile ? logoFile.name : "No file selected"}
                   </span>
                 </div>
 
                 {isUploadingLogo && (
                   <div className="mt-5 max-w-md">
-                    <div className="mb-2 flex items-center justify-between text-sm text-slate-600">
+                    <div className="mb-2 flex items-center justify-between text-sm text-slate-600 dark:text-slate-400">
                       <span>Uploading logo...</span>
                       <span>Please wait</span>
                     </div>
@@ -486,6 +517,118 @@ export default function SettingsPage() {
                     </div>
                   </div>
                 )}
+              </div>
+
+              <div className="mt-8 rounded-2xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 p-5">
+                <label className="mb-1 block text-sm font-semibold text-slate-800 dark:text-slate-200">
+                  Invoice Appearance
+                </label>
+                <p className="mb-5 text-sm text-slate-500 dark:text-slate-400">
+                  Customize how your invoices and PDFs look. Changes apply to
+                  every invoice you view, download, or send.
+                </p>
+
+                {/* Accent color */}
+                <div className="mb-6">
+                  <p className="mb-2 text-sm font-medium text-slate-700 dark:text-slate-300">
+                    Accent color
+                  </p>
+                  <div className="flex flex-wrap items-center gap-2.5">
+                    {ACCENT_SWATCHES.map((color) => {
+                      const active = businessProfile.accentColor === color;
+                      return (
+                        <button
+                          key={color}
+                          type="button"
+                          onClick={() =>
+                            setBusinessProfile((prev) => ({
+                              ...prev,
+                              accentColor: color,
+                            }))
+                          }
+                          aria-label={`Accent ${color}`}
+                          className={`h-9 w-9 rounded-full transition ${
+                            active
+                              ? "ring-2 ring-offset-2 ring-slate-900"
+                              : "ring-1 ring-slate-200 hover:ring-slate-300"
+                          }`}
+                          style={{ background: color }}
+                        />
+                      );
+                    })}
+
+                    <label className="ml-1 inline-flex items-center gap-2 rounded-xl border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-900 px-3 py-1.5 text-sm text-slate-600 dark:text-slate-400">
+                      Custom
+                      <input
+                        type="color"
+                        value={businessProfile.accentColor}
+                        onChange={(e) =>
+                          setBusinessProfile((prev) => ({
+                            ...prev,
+                            accentColor: e.target.value,
+                          }))
+                        }
+                        className="h-6 w-8 cursor-pointer rounded border-0 bg-transparent p-0"
+                      />
+                    </label>
+                  </div>
+                </div>
+
+                {/* Logo position */}
+                <div className="mb-6">
+                  <p className="mb-2 text-sm font-medium text-slate-700 dark:text-slate-300">
+                    Header layout
+                  </p>
+                  <div className="grid max-w-md grid-cols-2 gap-3">
+                    {(["left", "center"] as const).map((pos) => {
+                      const active = businessProfile.logoPosition === pos;
+                      return (
+                        <button
+                          key={pos}
+                          type="button"
+                          onClick={() =>
+                            setBusinessProfile((prev) => ({
+                              ...prev,
+                              logoPosition: pos,
+                            }))
+                          }
+                          className={`rounded-2xl border p-4 text-left transition ${
+                            active
+                              ? "border-blue-500 bg-blue-50 ring-4 ring-blue-100"
+                              : "border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 hover:border-slate-300"
+                          }`}
+                        >
+                          <p className="text-sm font-semibold capitalize text-slate-900 dark:text-slate-100">
+                            {pos === "left" ? "Left aligned" : "Centered"}
+                          </p>
+                          <p className="mt-0.5 text-xs text-slate-500 dark:text-slate-400">
+                            {pos === "left"
+                              ? "Business left, invoice info right"
+                              : "Logo and business centered on top"}
+                          </p>
+                        </button>
+                      );
+                    })}
+                  </div>
+                </div>
+
+                {/* Show item dates */}
+                <label className="flex cursor-pointer items-center justify-between rounded-2xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 px-4 py-3">
+                  <span className="text-sm font-medium text-slate-800 dark:text-slate-200">
+                    Show a date column on invoice items
+                  </span>
+                  <input
+                    type="checkbox"
+                    checked={businessProfile.showItemDates}
+                    onChange={(e) =>
+                      setBusinessProfile((prev) => ({
+                        ...prev,
+                        showItemDates: e.target.checked,
+                      }))
+                    }
+                    className="h-5 w-5 rounded border-slate-300 dark:border-slate-700 text-blue-600 focus:ring-blue-500"
+                  />
+                </label>
               </div>
 
               <div className="mt-6 flex flex-wrap gap-3">
@@ -503,14 +646,14 @@ export default function SettingsPage() {
         </div>
 
         <div className="space-y-6">
-          <div className="rounded-3xl border border-slate-200 bg-white p-6 shadow-sm">
-            <h2 className="text-xl font-semibold text-slate-900">Logo Preview</h2>
-            <p className="mt-1 text-sm text-slate-500">
+          <div className="rounded-3xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 p-6 shadow-sm">
+            <h2 className="text-xl font-semibold text-slate-900 dark:text-slate-100">Logo Preview</h2>
+            <p className="mt-1 text-sm text-slate-500 dark:text-slate-400">
               This is how your uploaded logo will appear inside the app.
             </p>
 
             {displayedLogo ? (
-              <div className="mt-5 flex min-h-[180px] items-center justify-center rounded-2xl border border-slate-200 bg-slate-50 p-6">
+              <div className="mt-5 flex min-h-[180px] items-center justify-center rounded-2xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 p-6">
                 <img
                   src={displayedLogo}
                   alt="Logo Preview"
@@ -518,12 +661,12 @@ export default function SettingsPage() {
                 />
               </div>
             ) : (
-              <div className="mt-5 flex min-h-[180px] items-center justify-center rounded-2xl border border-dashed border-slate-300 bg-slate-50 p-6 text-center">
+              <div className="mt-5 flex min-h-[180px] items-center justify-center rounded-2xl border border-dashed border-slate-300 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 p-6 text-center">
                 <div>
-                  <p className="text-sm font-semibold text-slate-700">
+                  <p className="text-sm font-semibold text-slate-700 dark:text-slate-300">
                     No logo uploaded yet
                   </p>
-                  <p className="mt-1 text-sm text-slate-500">
+                  <p className="mt-1 text-sm text-slate-500 dark:text-slate-400">
                     Upload a logo to preview your business branding here.
                   </p>
                 </div>
@@ -531,9 +674,11 @@ export default function SettingsPage() {
             )}
           </div>
 
-          <div className="rounded-3xl border border-slate-200 bg-white p-6 shadow-sm">
-            <h2 className="text-xl font-semibold text-slate-900">Branding Tips</h2>
-            <div className="mt-4 space-y-3 text-sm text-slate-600">
+          <AccountSettings />
+
+          <div className="rounded-3xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 p-6 shadow-sm">
+            <h2 className="text-xl font-semibold text-slate-900 dark:text-slate-100">Branding Tips</h2>
+            <div className="mt-4 space-y-3 text-sm text-slate-600 dark:text-slate-400">
               <p>Use your official business name for a more professional invoice header.</p>
               <p>Keep your logo simple and readable on both desktop and PDF versions.</p>
               <p>Add a clear email and phone number so clients can contact you easily.</p>

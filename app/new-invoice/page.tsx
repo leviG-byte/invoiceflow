@@ -40,6 +40,9 @@ type BusinessProfile = {
   address: string;
   logoUrl?: string;
   defaultItemType?: InvoiceItemType;
+  accentColor?: string;
+  logoPosition?: "left" | "center";
+  showItemDates?: boolean;
 };
 
 type DraftInvoice = {
@@ -90,6 +93,9 @@ type DatabaseBusinessProfileRow = {
   address: string | null;
   logo_url: string | null;
   default_item_type: string | null;
+  accent_color: string | null;
+  logo_position: string | null;
+  show_item_dates: boolean | null;
 };
 
 type UIInvoice = SavedInvoice & {
@@ -356,6 +362,9 @@ export default function NewInvoicePage() {
         address: profile.address || "",
         logoUrl: profile.logo_url || "",
         defaultItemType,
+        accentColor: profile.accent_color || undefined,
+        logoPosition: profile.logo_position === "center" ? "center" : "left",
+        showItemDates: profile.show_item_dates !== false,
       });
 
       // Apply the business's preferred invoice format to the untouched
@@ -700,9 +709,9 @@ export default function NewInvoicePage() {
   }
 
   return (
-    <main className="min-h-screen bg-slate-50">
+    <main className="min-h-screen bg-slate-50 dark:bg-slate-800">
       <div className="mx-auto max-w-7xl px-4 py-6 sm:px-6 lg:px-8">
-        <div className="mb-8 overflow-hidden rounded-3xl border border-slate-200 bg-white shadow-sm">
+        <div className="mb-8 overflow-hidden rounded-3xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 shadow-sm">
           <div className="bg-gradient-to-r from-slate-950 via-slate-900 to-blue-950 px-5 py-6 sm:px-6 lg:px-8">
             <div className="flex flex-col gap-5 lg:flex-row lg:items-end lg:justify-between">
               <div className="min-w-0">
@@ -732,7 +741,7 @@ export default function NewInvoicePage() {
           <div className="flex flex-wrap items-center justify-between gap-3 px-5 py-4 sm:px-6 lg:px-8">
             <Link
               href="/invoices"
-              className="inline-flex items-center rounded-xl border border-slate-200 bg-slate-50 px-4 py-2.5 text-sm font-medium text-slate-700 transition hover:bg-slate-100"
+              className="inline-flex items-center rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 px-4 py-2.5 text-sm font-medium text-slate-700 dark:text-slate-300 transition hover:bg-slate-100"
             >
               ← Back to Invoices
             </Link>
@@ -740,23 +749,23 @@ export default function NewInvoicePage() {
         </div>
 
         <div className="grid gap-8 xl:grid-cols-[minmax(0,1fr)_380px]">
-          <section className="min-w-0 overflow-hidden rounded-3xl border border-slate-200 bg-white p-5 shadow-sm sm:p-6 lg:p-8">
-            <div className="mb-8 flex flex-col gap-4 border-b border-slate-200 pb-6 sm:flex-row sm:items-end sm:justify-between">
+          <section className="min-w-0 overflow-hidden rounded-3xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 p-5 shadow-sm sm:p-6 lg:p-8">
+            <div className="mb-8 flex flex-col gap-4 border-b border-slate-200 dark:border-slate-700 pb-6 sm:flex-row sm:items-end sm:justify-between">
               <div className="min-w-0">
-                <h2 className="text-2xl font-bold tracking-tight text-slate-900">
+                <h2 className="text-2xl font-bold tracking-tight text-slate-900 dark:text-slate-100">
                   Invoice Details
                 </h2>
-                <p className="mt-1 text-sm text-slate-500">
+                <p className="mt-1 text-sm text-slate-500 dark:text-slate-400">
                   Fill out the invoice information, payment details, and line items
                   below.
                 </p>
               </div>
 
-              <div className="w-full rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 sm:w-auto">
-                <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">
+              <div className="w-full rounded-2xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 px-4 py-3 sm:w-auto">
+                <p className="text-xs font-semibold uppercase tracking-wide text-slate-500 dark:text-slate-400">
                   Current total
                 </p>
-                <p className="mt-1 text-2xl font-bold text-slate-900">
+                <p className="mt-1 text-2xl font-bold text-slate-900 dark:text-slate-100">
                   ${total.toFixed(2)}
                 </p>
               </div>
@@ -764,14 +773,14 @@ export default function NewInvoicePage() {
 
             <div className="grid gap-6 md:grid-cols-2">
               <div>
-                <label className="mb-2 block text-sm font-medium text-slate-700">
+                <label className="mb-2 block text-sm font-medium text-slate-700 dark:text-slate-300">
                   Client
                 </label>
 
                 <select
                   value={selectedClient}
                   onChange={(e) => handleClientSelect(e.target.value)}
-                  className="w-full rounded-2xl border border-slate-300 bg-white px-4 py-3 text-slate-900 outline-none transition focus:border-blue-500 focus:ring-4 focus:ring-blue-100"
+                  className="w-full rounded-2xl border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-900 px-4 py-3 text-slate-900 dark:text-slate-100 outline-none transition focus:border-blue-500 focus:ring-4 focus:ring-blue-100"
                 >
                   <option value="">Select a saved client</option>
 
@@ -784,7 +793,7 @@ export default function NewInvoicePage() {
               </div>
 
               <div>
-                <label className="mb-2 block text-sm font-medium text-slate-700">
+                <label className="mb-2 block text-sm font-medium text-slate-700 dark:text-slate-300">
                   Client Name
                 </label>
                 <input
@@ -792,12 +801,12 @@ export default function NewInvoicePage() {
                   placeholder="Client name"
                   value={clientName}
                   onChange={(e) => setClientName(e.target.value)}
-                  className="w-full rounded-2xl border border-slate-300 bg-white px-4 py-3 text-slate-900 placeholder-slate-400 outline-none transition focus:border-blue-500 focus:ring-4 focus:ring-blue-100"
+                  className="w-full rounded-2xl border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-900 px-4 py-3 text-slate-900 dark:text-slate-100 placeholder-slate-400 outline-none transition focus:border-blue-500 focus:ring-4 focus:ring-blue-100"
                 />
               </div>
 
               <div>
-                <label className="mb-2 block text-sm font-medium text-slate-700">
+                <label className="mb-2 block text-sm font-medium text-slate-700 dark:text-slate-300">
                   Invoice Number
                 </label>
                 <input
@@ -805,18 +814,18 @@ export default function NewInvoicePage() {
                   placeholder="INV-001"
                   value={invoiceNumber}
                   onChange={(e) => setInvoiceNumber(e.target.value.toUpperCase())}
-                  className="w-full rounded-2xl border border-slate-300 bg-white px-4 py-3 text-slate-900 placeholder-slate-400 outline-none transition focus:border-blue-500 focus:ring-4 focus:ring-blue-100"
+                  className="w-full rounded-2xl border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-900 px-4 py-3 text-slate-900 dark:text-slate-100 placeholder-slate-400 outline-none transition focus:border-blue-500 focus:ring-4 focus:ring-blue-100"
                 />
               </div>
 
               <div>
-                <label className="mb-2 block text-sm font-medium text-slate-700">
+                <label className="mb-2 block text-sm font-medium text-slate-700 dark:text-slate-300">
                   Status
                 </label>
                 <select
                   value={status}
                   onChange={(e) => handleStatusChange(e.target.value as InvoiceStatus)}
-                  className="w-full rounded-2xl border border-slate-300 bg-white px-4 py-3 text-slate-900 outline-none transition focus:border-blue-500 focus:ring-4 focus:ring-blue-100"
+                  className="w-full rounded-2xl border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-900 px-4 py-3 text-slate-900 dark:text-slate-100 outline-none transition focus:border-blue-500 focus:ring-4 focus:ring-blue-100"
                 >
                   <option value="Pending">Pending</option>
                   <option value="Paid">Paid</option>
@@ -824,31 +833,31 @@ export default function NewInvoicePage() {
               </div>
 
               <div>
-                <label className="mb-2 block text-sm font-medium text-slate-700">
+                <label className="mb-2 block text-sm font-medium text-slate-700 dark:text-slate-300">
                   Issue Date
                 </label>
                 <input
                   type="date"
                   value={issueDate}
                   onChange={(e) => setIssueDate(e.target.value)}
-                  className="w-full rounded-2xl border border-slate-300 bg-white px-4 py-3 text-slate-900 outline-none transition focus:border-blue-500 focus:ring-4 focus:ring-blue-100"
+                  className="w-full rounded-2xl border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-900 px-4 py-3 text-slate-900 dark:text-slate-100 outline-none transition focus:border-blue-500 focus:ring-4 focus:ring-blue-100"
                 />
               </div>
 
               <div>
-                <label className="mb-2 block text-sm font-medium text-slate-700">
+                <label className="mb-2 block text-sm font-medium text-slate-700 dark:text-slate-300">
                   Due Date
                 </label>
                 <input
                   type="date"
                   value={dueDate}
                   onChange={(e) => setDueDate(e.target.value)}
-                  className="w-full rounded-2xl border border-slate-300 bg-white px-4 py-3 text-slate-900 outline-none transition focus:border-blue-500 focus:ring-4 focus:ring-blue-100"
+                  className="w-full rounded-2xl border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-900 px-4 py-3 text-slate-900 dark:text-slate-100 outline-none transition focus:border-blue-500 focus:ring-4 focus:ring-blue-100"
                 />
               </div>
 
               <div>
-                <label className="mb-2 block text-sm font-medium text-slate-700">
+                <label className="mb-2 block text-sm font-medium text-slate-700 dark:text-slate-300">
                   Payment Method
                 </label>
                 <input
@@ -856,25 +865,25 @@ export default function NewInvoicePage() {
                   value={paymentMethod}
                   onChange={(e) => setPaymentMethod(e.target.value)}
                   placeholder="Zelle, Bank Transfer, Cash, PayPal..."
-                  className="w-full rounded-2xl border border-slate-300 bg-white px-4 py-3 text-slate-900 placeholder-slate-400 outline-none transition focus:border-blue-500 focus:ring-4 focus:ring-blue-100"
+                  className="w-full rounded-2xl border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-900 px-4 py-3 text-slate-900 dark:text-slate-100 placeholder-slate-400 outline-none transition focus:border-blue-500 focus:ring-4 focus:ring-blue-100"
                 />
               </div>
 
               <div>
-                <label className="mb-2 block text-sm font-medium text-slate-700">
+                <label className="mb-2 block text-sm font-medium text-slate-700 dark:text-slate-300">
                   Payment Date
                 </label>
                 <input
                   type="date"
                   value={paymentDate}
                   onChange={(e) => handlePaymentDateChange(e.target.value)}
-                  className="w-full rounded-2xl border border-slate-300 bg-white px-4 py-3 text-slate-900 outline-none transition focus:border-blue-500 focus:ring-4 focus:ring-blue-100"
+                  className="w-full rounded-2xl border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-900 px-4 py-3 text-slate-900 dark:text-slate-100 outline-none transition focus:border-blue-500 focus:ring-4 focus:ring-blue-100"
                 />
               </div>
             </div>
 
-            <div className="mt-6 rounded-2xl border border-slate-200 bg-slate-50/70 p-4 sm:p-5">
-              <label className="mb-2 block text-sm font-medium text-slate-700">
+            <div className="mt-6 rounded-2xl border border-slate-200 dark:border-slate-700 bg-slate-50/70 p-4 sm:p-5">
+              <label className="mb-2 block text-sm font-medium text-slate-700 dark:text-slate-300">
                 Payment Notes
               </label>
               <textarea
@@ -882,15 +891,15 @@ export default function NewInvoicePage() {
                 onChange={(e) => setPaymentNotes(e.target.value)}
                 rows={4}
                 placeholder="Example: Zelle, bank transfer details, payment instructions, late fee note..."
-                className="w-full rounded-2xl border border-slate-300 bg-white px-4 py-3 text-slate-900 placeholder-slate-400 outline-none transition focus:border-blue-500 focus:ring-4 focus:ring-blue-100"
+                className="w-full rounded-2xl border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-900 px-4 py-3 text-slate-900 dark:text-slate-100 placeholder-slate-400 outline-none transition focus:border-blue-500 focus:ring-4 focus:ring-blue-100"
               />
             </div>
 
             <div className="mt-8 min-w-0">
               <div className="mb-5 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
                 <div className="min-w-0">
-                  <h3 className="text-xl font-semibold text-slate-900">Invoice Items</h3>
-                  <p className="text-sm text-slate-500">
+                  <h3 className="text-xl font-semibold text-slate-900 dark:text-slate-100">Invoice Items</h3>
+                  <p className="text-sm text-slate-500 dark:text-slate-400">
                     Add the work details that will appear on this invoice.
                   </p>
                 </div>
@@ -907,10 +916,10 @@ export default function NewInvoicePage() {
                 {items.map((item, index) => (
                   <div
                     key={index}
-                    className="min-w-0 rounded-2xl border border-slate-200 bg-slate-50/70 p-4 sm:p-5"
+                    className="min-w-0 rounded-2xl border border-slate-200 dark:border-slate-700 bg-slate-50/70 p-4 sm:p-5"
                   >
                     <div className="mb-4 flex items-center justify-between gap-3">
-                      <div className="rounded-full bg-white px-3 py-1 text-xs font-semibold text-slate-600 ring-1 ring-slate-200">
+                      <div className="rounded-full bg-white dark:bg-slate-900 px-3 py-1 text-xs font-semibold text-slate-600 dark:text-slate-400 ring-1 ring-slate-200">
                         Row {index + 1}
                       </div>
 
@@ -932,7 +941,7 @@ export default function NewInvoicePage() {
                           )
                         }
                         aria-label="Item type"
-                        className="w-full min-w-0 rounded-2xl border border-slate-300 bg-white px-4 py-3 text-slate-900 outline-none transition focus:border-blue-500 focus:ring-4 focus:ring-blue-100"
+                        className="w-full min-w-0 rounded-2xl border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-900 px-4 py-3 text-slate-900 dark:text-slate-100 outline-none transition focus:border-blue-500 focus:ring-4 focus:ring-blue-100"
                       >
                         <option value="hourly">Hourly</option>
                         <option value="fixed">Flat Fee</option>
@@ -945,7 +954,7 @@ export default function NewInvoicePage() {
                           handleItemChange(index, "date", e.target.value)
                         }
                         aria-label="Item date"
-                        className="w-full min-w-0 rounded-2xl border border-slate-300 bg-white px-4 py-3 text-slate-900 outline-none transition focus:border-blue-500 focus:ring-4 focus:ring-blue-100"
+                        className="w-full min-w-0 rounded-2xl border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-900 px-4 py-3 text-slate-900 dark:text-slate-100 outline-none transition focus:border-blue-500 focus:ring-4 focus:ring-blue-100"
                       />
 
                       {getItemType(item) === "fixed" ? (
@@ -958,7 +967,7 @@ export default function NewInvoicePage() {
                           onChange={(e) =>
                             handleItemChange(index, "amount", e.target.value)
                           }
-                          className="col-span-2 w-full min-w-0 rounded-2xl border border-slate-300 bg-white px-4 py-3 text-slate-900 placeholder-slate-400 outline-none transition focus:border-blue-500 focus:ring-4 focus:ring-blue-100"
+                          className="col-span-2 w-full min-w-0 rounded-2xl border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-900 px-4 py-3 text-slate-900 dark:text-slate-100 placeholder-slate-400 outline-none transition focus:border-blue-500 focus:ring-4 focus:ring-blue-100"
                         />
                       ) : (
                         <>
@@ -971,7 +980,7 @@ export default function NewInvoicePage() {
                             onChange={(e) =>
                               handleItemChange(index, "hours", e.target.value)
                             }
-                            className="w-full min-w-0 rounded-2xl border border-slate-300 bg-white px-4 py-3 text-slate-900 placeholder-slate-400 outline-none transition focus:border-blue-500 focus:ring-4 focus:ring-blue-100"
+                            className="w-full min-w-0 rounded-2xl border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-900 px-4 py-3 text-slate-900 dark:text-slate-100 placeholder-slate-400 outline-none transition focus:border-blue-500 focus:ring-4 focus:ring-blue-100"
                           />
 
                           <input
@@ -983,7 +992,7 @@ export default function NewInvoicePage() {
                             onChange={(e) =>
                               handleItemChange(index, "rate", e.target.value)
                             }
-                            className="w-full min-w-0 rounded-2xl border border-slate-300 bg-white px-4 py-3 text-slate-900 placeholder-slate-400 outline-none transition focus:border-blue-500 focus:ring-4 focus:ring-blue-100"
+                            className="w-full min-w-0 rounded-2xl border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-900 px-4 py-3 text-slate-900 dark:text-slate-100 placeholder-slate-400 outline-none transition focus:border-blue-500 focus:ring-4 focus:ring-blue-100"
                           />
                         </>
                       )}
@@ -1004,7 +1013,7 @@ export default function NewInvoicePage() {
 
             <div className="mt-6 grid gap-4 sm:grid-cols-2">
               <div>
-                <label className="mb-2 block text-sm font-medium text-slate-700">
+                <label className="mb-2 block text-sm font-medium text-slate-700 dark:text-slate-300">
                   Tax Rate (%)
                 </label>
                 <input
@@ -1014,12 +1023,12 @@ export default function NewInvoicePage() {
                   placeholder="0"
                   value={taxRate}
                   onChange={(e) => setTaxRate(e.target.value)}
-                  className="w-full rounded-2xl border border-slate-300 bg-white px-4 py-3 text-slate-900 placeholder-slate-400 outline-none transition focus:border-blue-500 focus:ring-4 focus:ring-blue-100"
+                  className="w-full rounded-2xl border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-900 px-4 py-3 text-slate-900 dark:text-slate-100 placeholder-slate-400 outline-none transition focus:border-blue-500 focus:ring-4 focus:ring-blue-100"
                 />
               </div>
 
               <div>
-                <label className="mb-2 block text-sm font-medium text-slate-700">
+                <label className="mb-2 block text-sm font-medium text-slate-700 dark:text-slate-300">
                   Discount ($)
                 </label>
                 <input
@@ -1029,12 +1038,12 @@ export default function NewInvoicePage() {
                   placeholder="0"
                   value={discount}
                   onChange={(e) => setDiscount(e.target.value)}
-                  className="w-full rounded-2xl border border-slate-300 bg-white px-4 py-3 text-slate-900 placeholder-slate-400 outline-none transition focus:border-blue-500 focus:ring-4 focus:ring-blue-100"
+                  className="w-full rounded-2xl border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-900 px-4 py-3 text-slate-900 dark:text-slate-100 placeholder-slate-400 outline-none transition focus:border-blue-500 focus:ring-4 focus:ring-blue-100"
                 />
               </div>
             </div>
 
-            <div className="mt-8 rounded-3xl border border-slate-200 bg-slate-950 p-5 text-white shadow-sm sm:p-6">
+            <div className="mt-8 rounded-3xl border border-slate-200 dark:border-slate-700 bg-slate-950 p-5 text-white shadow-sm sm:p-6">
               <div className="flex flex-col gap-5 sm:flex-row sm:items-end sm:justify-between">
                 <div className="min-w-0 space-y-1.5 text-sm">
                   <div className="flex items-center justify-between gap-8 text-slate-300 sm:justify-start">
@@ -1070,7 +1079,7 @@ export default function NewInvoicePage() {
 
                 <button
                   onClick={handleSaveInvoice}
-                  className="inline-flex items-center justify-center rounded-2xl bg-white px-5 py-3 text-sm font-semibold text-slate-900 transition hover:bg-slate-100"
+                  className="inline-flex items-center justify-center rounded-2xl bg-white dark:bg-slate-900 px-5 py-3 text-sm font-semibold text-slate-900 dark:text-slate-100 transition hover:bg-slate-100"
                 >
                   Save Invoice
                 </button>
@@ -1079,14 +1088,14 @@ export default function NewInvoicePage() {
           </section>
 
           <aside className="min-w-0 space-y-6">
-            <div className="overflow-hidden rounded-3xl border border-slate-200 bg-white shadow-sm">
-              <div className="border-b border-slate-200 px-5 py-4 sm:px-6">
+            <div className="overflow-hidden rounded-3xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 shadow-sm">
+              <div className="border-b border-slate-200 dark:border-slate-700 px-5 py-4 sm:px-6">
                 <div className="flex items-center justify-between gap-4">
                   <div className="min-w-0">
-                    <h2 className="text-xl font-semibold text-slate-900">
+                    <h2 className="text-xl font-semibold text-slate-900 dark:text-slate-100">
                       Latest Invoice Preview
                     </h2>
-                    <p className="mt-1 text-sm text-slate-500">
+                    <p className="mt-1 text-sm text-slate-500 dark:text-slate-400">
                       Quick look at the most recently saved invoice.
                     </p>
                   </div>
@@ -1106,78 +1115,78 @@ export default function NewInvoicePage() {
               <div className="p-5 sm:p-6">
                 {previewInvoice ? (
                   <>
-                    <div className="rounded-2xl border border-slate-200 bg-slate-50 p-4 sm:p-5">
+                    <div className="rounded-2xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 p-4 sm:p-5">
                       <div className="grid gap-4 sm:grid-cols-2">
                         <div className="min-w-0">
-                          <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">
+                          <p className="text-xs font-semibold uppercase tracking-wide text-slate-500 dark:text-slate-400">
                             Invoice Number
                           </p>
-                          <p className="mt-1 break-words text-lg font-bold text-slate-900">
+                          <p className="mt-1 break-words text-lg font-bold text-slate-900 dark:text-slate-100">
                             {previewInvoice.invoiceNumber}
                           </p>
                         </div>
 
                         <div className="min-w-0">
-                          <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">
+                          <p className="text-xs font-semibold uppercase tracking-wide text-slate-500 dark:text-slate-400">
                             Client
                           </p>
-                          <p className="mt-1 break-words text-sm font-medium text-slate-900">
+                          <p className="mt-1 break-words text-sm font-medium text-slate-900 dark:text-slate-100">
                             {previewInvoice.clientName}
                           </p>
                         </div>
 
                         <div>
-                          <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">
+                          <p className="text-xs font-semibold uppercase tracking-wide text-slate-500 dark:text-slate-400">
                             Issue Date
                           </p>
-                          <p className="mt-1 text-sm text-slate-700">
+                          <p className="mt-1 text-sm text-slate-700 dark:text-slate-300">
                             {previewInvoice.issueDate || "-"}
                           </p>
                         </div>
 
                         <div>
-                          <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">
+                          <p className="text-xs font-semibold uppercase tracking-wide text-slate-500 dark:text-slate-400">
                             Due Date
                           </p>
-                          <p className="mt-1 text-sm text-slate-700">
+                          <p className="mt-1 text-sm text-slate-700 dark:text-slate-300">
                             {previewInvoice.dueDate || "-"}
                           </p>
                         </div>
 
                         <div>
-                          <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">
+                          <p className="text-xs font-semibold uppercase tracking-wide text-slate-500 dark:text-slate-400">
                             Payment Method
                           </p>
-                          <p className="mt-1 break-words text-sm text-slate-700">
+                          <p className="mt-1 break-words text-sm text-slate-700 dark:text-slate-300">
                             {previewInvoice.paymentMethod || "-"}
                           </p>
                         </div>
 
                         <div>
-                          <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">
+                          <p className="text-xs font-semibold uppercase tracking-wide text-slate-500 dark:text-slate-400">
                             Payment Date
                           </p>
-                          <p className="mt-1 text-sm text-slate-700">
+                          <p className="mt-1 text-sm text-slate-700 dark:text-slate-300">
                             {previewInvoice.paymentDate || "-"}
                           </p>
                         </div>
                       </div>
 
-                      <div className="mt-5 rounded-2xl bg-white p-4 ring-1 ring-slate-200">
-                        <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">
+                      <div className="mt-5 rounded-2xl bg-white dark:bg-slate-900 p-4 ring-1 ring-slate-200">
+                        <p className="text-xs font-semibold uppercase tracking-wide text-slate-500 dark:text-slate-400">
                           Total
                         </p>
-                        <p className="mt-1 text-2xl font-bold text-slate-900">
+                        <p className="mt-1 text-2xl font-bold text-slate-900 dark:text-slate-100">
                           ${previewInvoice.total.toFixed(2)}
                         </p>
                       </div>
 
                       {previewInvoice.paymentNotes && (
-                        <div className="mt-5 rounded-2xl bg-white p-4 ring-1 ring-slate-200">
-                          <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">
+                        <div className="mt-5 rounded-2xl bg-white dark:bg-slate-900 p-4 ring-1 ring-slate-200">
+                          <p className="text-xs font-semibold uppercase tracking-wide text-slate-500 dark:text-slate-400">
                             Payment Notes
                           </p>
-                          <p className="mt-2 whitespace-pre-line break-words text-sm leading-6 text-slate-700">
+                          <p className="mt-2 whitespace-pre-line break-words text-sm leading-6 text-slate-700 dark:text-slate-300">
                             {previewInvoice.paymentNotes}
                           </p>
                         </div>
@@ -1201,26 +1210,26 @@ export default function NewInvoicePage() {
                     </div>
                   </>
                 ) : (
-                  <div className="rounded-2xl border border-dashed border-slate-300 bg-slate-50 p-6 text-sm text-slate-600">
+                  <div className="rounded-2xl border border-dashed border-slate-300 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 p-6 text-sm text-slate-600 dark:text-slate-400">
                     No invoices saved yet.
                   </div>
                 )}
               </div>
             </div>
 
-            <div className="overflow-hidden rounded-3xl border border-slate-200 bg-white shadow-sm">
-              <div className="border-b border-slate-200 px-5 py-4 sm:px-6">
+            <div className="overflow-hidden rounded-3xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 shadow-sm">
+              <div className="border-b border-slate-200 dark:border-slate-700 px-5 py-4 sm:px-6">
                 <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
                   <div>
-                    <h2 className="text-xl font-semibold text-slate-900">
+                    <h2 className="text-xl font-semibold text-slate-900 dark:text-slate-100">
                       Saved Invoices
                     </h2>
-                    <p className="mt-1 text-sm text-slate-500">
+                    <p className="mt-1 text-sm text-slate-500 dark:text-slate-400">
                       Recent invoices in a cleaner, easier-to-scan layout.
                     </p>
                   </div>
 
-                  <div className="rounded-full bg-slate-100 px-3 py-1 text-xs font-semibold text-slate-600">
+                  <div className="rounded-full bg-slate-100 dark:bg-slate-950 px-3 py-1 text-xs font-semibold text-slate-600 dark:text-slate-400">
                     {savedInvoices.length} total
                   </div>
                 </div>
@@ -1228,7 +1237,7 @@ export default function NewInvoicePage() {
 
               <div className="p-5 sm:p-6">
                 {savedInvoices.length === 0 ? (
-                  <div className="rounded-2xl border border-dashed border-slate-300 bg-slate-50 p-6 text-sm text-slate-600">
+                  <div className="rounded-2xl border border-dashed border-slate-300 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 p-6 text-sm text-slate-600 dark:text-slate-400">
                     No invoices found.
                   </div>
                 ) : (
@@ -1236,14 +1245,14 @@ export default function NewInvoicePage() {
                     {savedInvoices.map((invoice) => (
                       <div
                         key={invoice.id}
-                        className="rounded-2xl border border-slate-200 bg-slate-50/80 p-4 transition hover:border-slate-300 hover:bg-white"
+                        className="rounded-2xl border border-slate-200 dark:border-slate-700 bg-slate-50/80 p-4 transition hover:border-slate-300 hover:bg-white"
                       >
                         <div className="mb-4 flex items-start justify-between gap-3">
                           <div className="min-w-0">
-                            <p className="break-words text-base font-semibold text-slate-900">
+                            <p className="break-words text-base font-semibold text-slate-900 dark:text-slate-100">
                               {invoice.invoiceNumber}
                             </p>
-                            <p className="mt-1 break-words text-sm text-slate-600">
+                            <p className="mt-1 break-words text-sm text-slate-600 dark:text-slate-400">
                               {invoice.clientName}
                             </p>
                           </div>
@@ -1265,24 +1274,24 @@ export default function NewInvoicePage() {
                           </select>
                         </div>
 
-                        <div className="grid gap-3 rounded-2xl bg-white p-4 ring-1 ring-slate-200">
+                        <div className="grid gap-3 rounded-2xl bg-white dark:bg-slate-900 p-4 ring-1 ring-slate-200">
                           <div className="flex items-center justify-between gap-3">
-                            <span className="text-sm text-slate-500">Total</span>
-                            <span className="text-base font-semibold text-slate-900">
+                            <span className="text-sm text-slate-500 dark:text-slate-400">Total</span>
+                            <span className="text-base font-semibold text-slate-900 dark:text-slate-100">
                               ${invoice.total.toFixed(2)}
                             </span>
                           </div>
 
                           <div className="flex items-center justify-between gap-3">
-                            <span className="text-sm text-slate-500">Issue Date</span>
-                            <span className="text-sm text-slate-700">
+                            <span className="text-sm text-slate-500 dark:text-slate-400">Issue Date</span>
+                            <span className="text-sm text-slate-700 dark:text-slate-300">
                               {invoice.issueDate || "-"}
                             </span>
                           </div>
 
                           <div className="flex items-center justify-between gap-3">
-                            <span className="text-sm text-slate-500">Due Date</span>
-                            <span className="text-sm text-slate-700">
+                            <span className="text-sm text-slate-500 dark:text-slate-400">Due Date</span>
+                            <span className="text-sm text-slate-700 dark:text-slate-300">
                               {invoice.dueDate || "-"}
                             </span>
                           </div>

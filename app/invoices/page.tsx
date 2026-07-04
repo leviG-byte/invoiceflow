@@ -280,7 +280,7 @@ export default function InvoicesPage() {
 
   return (
     <div className="space-y-6">
-      <div className="overflow-hidden rounded-3xl border border-slate-200 bg-white shadow-sm">
+      <div className="overflow-hidden rounded-3xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 shadow-sm">
         <div className="bg-gradient-to-r from-slate-950 via-slate-900 to-blue-950 px-5 py-6 sm:px-6 lg:px-8">
           <div className="flex flex-col gap-5 lg:flex-row lg:items-end lg:justify-between">
             <div className="min-w-0">
@@ -298,62 +298,62 @@ export default function InvoicesPage() {
 
             <Link
               href="/new-invoice"
-              className="inline-flex items-center justify-center rounded-2xl bg-white px-5 py-3 text-sm font-semibold text-slate-950 transition hover:bg-slate-100"
+              className="inline-flex items-center justify-center rounded-2xl bg-white dark:bg-slate-900 px-5 py-3 text-sm font-semibold text-slate-950 dark:text-white transition hover:bg-slate-100"
             >
               + Create Invoice
             </Link>
           </div>
         </div>
 
-        <div className="grid gap-4 border-t border-slate-200 bg-white px-5 py-5 sm:grid-cols-2 xl:grid-cols-5 sm:px-6 lg:px-8">
-          <div className="rounded-2xl border border-slate-200 bg-slate-50 p-5 transition hover:-translate-y-0.5 hover:bg-white hover:shadow-md">
-            <p className="text-sm font-medium text-slate-600">Total Invoices</p>
-            <p className="mt-2 text-2xl font-bold text-slate-950">
+        <div className="grid gap-4 border-t border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 px-5 py-5 sm:grid-cols-2 xl:grid-cols-5 sm:px-6 lg:px-8">
+          <div className="rounded-2xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 p-5 transition hover:-translate-y-0.5 hover:bg-white hover:shadow-md">
+            <p className="text-sm font-medium text-slate-600 dark:text-slate-400">Total Invoices</p>
+            <p className="mt-2 text-2xl font-bold text-slate-950 dark:text-white">
               {totalInvoices}
             </p>
           </div>
 
           <div className="rounded-2xl border border-green-200 bg-green-50/40 p-5 transition hover:-translate-y-0.5 hover:bg-white hover:shadow-md">
-            <p className="text-sm font-medium text-slate-600">Paid</p>
+            <p className="text-sm font-medium text-slate-600 dark:text-slate-400">Paid</p>
             <p className="mt-2 text-2xl font-bold text-green-600">
               {paidInvoices}
             </p>
           </div>
 
           <div className="rounded-2xl border border-amber-200 bg-amber-50/40 p-5 transition hover:-translate-y-0.5 hover:bg-white hover:shadow-md">
-            <p className="text-sm font-medium text-slate-600">Pending</p>
+            <p className="text-sm font-medium text-slate-600 dark:text-slate-400">Pending</p>
             <p className="mt-2 text-2xl font-bold text-amber-600">
               {pendingInvoices}
             </p>
           </div>
 
           <div className="rounded-2xl border border-red-200 bg-red-50/40 p-5 transition hover:-translate-y-0.5 hover:bg-white hover:shadow-md">
-            <p className="text-sm font-medium text-slate-600">Overdue</p>
+            <p className="text-sm font-medium text-slate-600 dark:text-slate-400">Overdue</p>
             <p className="mt-2 text-2xl font-bold text-red-600">
               {overdueInvoices}
             </p>
           </div>
 
-          <div className="rounded-2xl border border-slate-200 bg-slate-50 p-5 transition hover:-translate-y-0.5 hover:bg-white hover:shadow-md">
-            <p className="text-sm font-medium text-slate-600">Total Revenue</p>
-            <p className="mt-2 text-2xl font-bold text-slate-950">
+          <div className="rounded-2xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 p-5 transition hover:-translate-y-0.5 hover:bg-white hover:shadow-md">
+            <p className="text-sm font-medium text-slate-600 dark:text-slate-400">Total Revenue</p>
+            <p className="mt-2 text-2xl font-bold text-slate-950 dark:text-white">
               ${totalRevenue.toFixed(2)}
             </p>
           </div>
         </div>
       </div>
 
-      <div className="hidden rounded-3xl border border-slate-200 bg-white p-5 shadow-sm md:block">
+      <div className="hidden rounded-3xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 p-5 shadow-sm md:block">
         <div className="mb-5">
-          <h2 className="text-lg font-semibold text-slate-900">Filters</h2>
-          <p className="mt-1 text-sm text-slate-500">
+          <h2 className="text-lg font-semibold text-slate-900 dark:text-slate-100">Filters</h2>
+          <p className="mt-1 text-sm text-slate-500 dark:text-slate-400">
             Search invoices and narrow results by status or sort order.
           </p>
         </div>
 
         <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
           <div>
-            <label className="mb-2 block text-sm font-semibold text-slate-800">
+            <label className="mb-2 block text-sm font-semibold text-slate-800 dark:text-slate-200">
               Search
             </label>
             <input
@@ -361,18 +361,18 @@ export default function InvoicesPage() {
               placeholder="Search by client, invoice #, or status"
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
-              className="w-full rounded-2xl border border-slate-300 bg-white px-4 py-3 text-sm text-slate-900 outline-none transition placeholder:text-slate-400 focus:border-blue-500 focus:ring-4 focus:ring-blue-100"
+              className="w-full rounded-2xl border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-900 px-4 py-3 text-sm text-slate-900 dark:text-slate-100 outline-none transition placeholder:text-slate-400 focus:border-blue-500 focus:ring-4 focus:ring-blue-100"
             />
           </div>
 
           <div>
-            <label className="mb-2 block text-sm font-semibold text-slate-800">
+            <label className="mb-2 block text-sm font-semibold text-slate-800 dark:text-slate-200">
               Status
             </label>
             <select
               value={statusFilter}
               onChange={(e) => setStatusFilter(e.target.value)}
-              className="w-full rounded-2xl border border-slate-300 bg-white px-4 py-3 text-sm text-slate-900 outline-none transition focus:border-blue-500 focus:ring-4 focus:ring-blue-100"
+              className="w-full rounded-2xl border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-900 px-4 py-3 text-sm text-slate-900 dark:text-slate-100 outline-none transition focus:border-blue-500 focus:ring-4 focus:ring-blue-100"
             >
               <option value="All">All</option>
               <option value="Pending">Pending</option>
@@ -382,13 +382,13 @@ export default function InvoicesPage() {
           </div>
 
           <div>
-            <label className="mb-2 block text-sm font-semibold text-slate-800">
+            <label className="mb-2 block text-sm font-semibold text-slate-800 dark:text-slate-200">
               Sort By
             </label>
             <select
               value={sortBy}
               onChange={(e) => setSortBy(e.target.value)}
-              className="w-full rounded-2xl border border-slate-300 bg-white px-4 py-3 text-sm text-slate-900 outline-none transition focus:border-blue-500 focus:ring-4 focus:ring-blue-100"
+              className="w-full rounded-2xl border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-900 px-4 py-3 text-sm text-slate-900 dark:text-slate-100 outline-none transition focus:border-blue-500 focus:ring-4 focus:ring-blue-100"
             >
               <option value="newest">Newest First</option>
               <option value="oldest">Oldest First</option>
@@ -404,7 +404,7 @@ export default function InvoicesPage() {
       <div className="md:hidden">
         <button
           onClick={() => setShowMobileFilters((prev) => !prev)}
-          className="flex w-full items-center justify-between rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm font-semibold text-slate-900 shadow-sm transition hover:border-slate-300"
+          className="flex w-full items-center justify-between rounded-2xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 px-4 py-3 text-sm font-semibold text-slate-900 dark:text-slate-100 shadow-sm transition hover:border-slate-300"
         >
           <span>Filters and Search</span>
           <span className="text-lg leading-none">
@@ -414,10 +414,10 @@ export default function InvoicesPage() {
       </div>
 
       {showMobileFilters && (
-        <div className="rounded-3xl border border-slate-200 bg-white p-4 shadow-sm md:hidden">
+        <div className="rounded-3xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 p-4 shadow-sm md:hidden">
           <div className="grid grid-cols-1 gap-4">
             <div>
-              <label className="mb-2 block text-sm font-semibold text-slate-800">
+              <label className="mb-2 block text-sm font-semibold text-slate-800 dark:text-slate-200">
                 Search
               </label>
               <input
@@ -425,18 +425,18 @@ export default function InvoicesPage() {
                 placeholder="Search by client, invoice #, or status"
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
-                className="w-full rounded-2xl border border-slate-300 bg-white px-4 py-3 text-sm text-slate-900 outline-none transition placeholder:text-slate-400 focus:border-blue-500 focus:ring-4 focus:ring-blue-100"
+                className="w-full rounded-2xl border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-900 px-4 py-3 text-sm text-slate-900 dark:text-slate-100 outline-none transition placeholder:text-slate-400 focus:border-blue-500 focus:ring-4 focus:ring-blue-100"
               />
             </div>
 
             <div>
-              <label className="mb-2 block text-sm font-semibold text-slate-800">
+              <label className="mb-2 block text-sm font-semibold text-slate-800 dark:text-slate-200">
                 Status
               </label>
               <select
                 value={statusFilter}
                 onChange={(e) => setStatusFilter(e.target.value)}
-                className="w-full rounded-2xl border border-slate-300 bg-white px-4 py-3 text-sm text-slate-900 outline-none transition focus:border-blue-500 focus:ring-4 focus:ring-blue-100"
+                className="w-full rounded-2xl border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-900 px-4 py-3 text-sm text-slate-900 dark:text-slate-100 outline-none transition focus:border-blue-500 focus:ring-4 focus:ring-blue-100"
               >
                 <option value="All">All</option>
                 <option value="Pending">Pending</option>
@@ -446,13 +446,13 @@ export default function InvoicesPage() {
             </div>
 
             <div>
-              <label className="mb-2 block text-sm font-semibold text-slate-800">
+              <label className="mb-2 block text-sm font-semibold text-slate-800 dark:text-slate-200">
                 Sort By
               </label>
               <select
                 value={sortBy}
                 onChange={(e) => setSortBy(e.target.value)}
-                className="w-full rounded-2xl border border-slate-300 bg-white px-4 py-3 text-sm text-slate-900 outline-none transition focus:border-blue-500 focus:ring-4 focus:ring-blue-100"
+                className="w-full rounded-2xl border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-900 px-4 py-3 text-sm text-slate-900 dark:text-slate-100 outline-none transition focus:border-blue-500 focus:ring-4 focus:ring-blue-100"
               >
                 <option value="newest">Newest First</option>
                 <option value="oldest">Oldest First</option>
@@ -475,11 +475,11 @@ export default function InvoicesPage() {
               <StatCardSkeleton />
             </>
           ) : filteredInvoices.length === 0 ? (
-            <div className="rounded-3xl border border-dashed border-slate-300 bg-white p-8 text-center shadow-sm">
-              <p className="text-base font-semibold text-slate-900">
+            <div className="rounded-3xl border border-dashed border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-900 p-8 text-center shadow-sm">
+              <p className="text-base font-semibold text-slate-900 dark:text-slate-100">
                 No invoices yet
               </p>
-              <p className="mt-2 text-sm text-slate-600">
+              <p className="mt-2 text-sm text-slate-600 dark:text-slate-400">
                 Create your first invoice to start tracking payments.
               </p>
               <Link
@@ -496,10 +496,10 @@ export default function InvoicesPage() {
               return (
                 <div
                   key={invoice.id}
-                  className={`rounded-3xl border bg-white p-4 shadow-sm transition hover:shadow-md ${
+                  className={`rounded-3xl border bg-white dark:bg-slate-900 p-4 shadow-sm transition hover:shadow-md ${
                     displayStatus === "Overdue"
                       ? "border-red-200 bg-red-50/30"
-                      : "border-slate-200"
+                      : "border-slate-200 dark:border-slate-700"
                   }`}
                 >
                   <div className="flex items-start justify-between gap-3">
@@ -509,17 +509,17 @@ export default function InvoicesPage() {
                       </div>
 
                       <div className="min-w-0">
-                        <p className="truncate text-base font-semibold text-slate-950">
+                        <p className="truncate text-base font-semibold text-slate-950 dark:text-white">
                           {invoice.clientName}
                         </p>
 
-                        <div className="mt-1 flex flex-wrap items-center gap-2 text-sm text-slate-600">
+                        <div className="mt-1 flex flex-wrap items-center gap-2 text-sm text-slate-600 dark:text-slate-400">
                           <span>Invoice #{invoice.invoiceNumber}</span>
                           <button
                             onClick={() =>
                               handleCopyInvoiceNumber(invoice.invoiceNumber)
                             }
-                            className="rounded-lg border border-slate-200 px-2 py-0.5 text-xs font-semibold text-slate-700 transition hover:bg-slate-100"
+                            className="rounded-lg border border-slate-200 dark:border-slate-700 px-2 py-0.5 text-xs font-semibold text-slate-700 dark:text-slate-300 transition hover:bg-slate-100"
                           >
                             Copy
                           </button>
@@ -540,30 +540,30 @@ export default function InvoicesPage() {
                     </span>
                   </div>
 
-                  <div className="mt-4 grid grid-cols-2 gap-3 rounded-2xl bg-slate-50 p-4 text-sm">
+                  <div className="mt-4 grid grid-cols-2 gap-3 rounded-2xl bg-slate-50 dark:bg-slate-800 p-4 text-sm">
                     <div>
-                      <p className="font-medium text-slate-500">Issue Date</p>
-                      <p className="font-semibold text-slate-900">
+                      <p className="font-medium text-slate-500 dark:text-slate-400">Issue Date</p>
+                      <p className="font-semibold text-slate-900 dark:text-slate-100">
                         {invoice.issueDate || "-"}
                       </p>
                     </div>
 
                     <div>
-                      <p className="font-medium text-slate-500">Due Date</p>
-                      <p className="font-semibold text-slate-900">
+                      <p className="font-medium text-slate-500 dark:text-slate-400">Due Date</p>
+                      <p className="font-semibold text-slate-900 dark:text-slate-100">
                         {invoice.dueDate || "-"}
                       </p>
                     </div>
 
                     <div>
-                      <p className="font-medium text-slate-500">Total</p>
-                      <p className="font-bold text-slate-950">
+                      <p className="font-medium text-slate-500 dark:text-slate-400">Total</p>
+                      <p className="font-bold text-slate-950 dark:text-white">
                         ${invoice.total.toFixed(2)}
                       </p>
                     </div>
 
                     <div>
-                      <p className="font-medium text-slate-500">Status</p>
+                      <p className="font-medium text-slate-500 dark:text-slate-400">Status</p>
                       <select
                         value={invoice.status}
                         onChange={(e) =>
@@ -584,28 +584,28 @@ export default function InvoicesPage() {
                   <div className="mt-4 grid grid-cols-2 gap-2">
                     <Link
                       href={`/invoices/${invoice.id}`}
-                      className="rounded-xl border border-slate-300 px-3 py-2.5 text-center text-sm font-semibold text-slate-800 transition hover:border-slate-400 hover:bg-slate-50"
+                      className="rounded-xl border border-slate-300 dark:border-slate-700 px-3 py-2.5 text-center text-sm font-semibold text-slate-800 dark:text-slate-200 transition hover:border-slate-400 hover:bg-slate-50"
                     >
                       View
                     </Link>
 
                     <Link
                       href={`/invoices/${invoice.id}/edit`}
-                      className="rounded-xl border border-slate-300 px-3 py-2.5 text-center text-sm font-semibold text-slate-800 transition hover:border-slate-400 hover:bg-slate-50"
+                      className="rounded-xl border border-slate-300 dark:border-slate-700 px-3 py-2.5 text-center text-sm font-semibold text-slate-800 dark:text-slate-200 transition hover:border-slate-400 hover:bg-slate-50"
                     >
                       Edit
                     </Link>
 
                     <button
                       onClick={() => handleDuplicateInvoice(invoice)}
-                      className="rounded-xl border border-slate-300 px-3 py-2.5 text-sm font-semibold text-slate-800 transition hover:border-slate-400 hover:bg-slate-50"
+                      className="rounded-xl border border-slate-300 dark:border-slate-700 px-3 py-2.5 text-sm font-semibold text-slate-800 dark:text-slate-200 transition hover:border-slate-400 hover:bg-slate-50"
                     >
                       Duplicate
                     </button>
 
                     <button
                       onClick={() => handleDownloadPdf(invoice)}
-                      className="rounded-xl border border-slate-300 px-3 py-2.5 text-sm font-semibold text-slate-800 transition hover:border-slate-400 hover:bg-slate-50"
+                      className="rounded-xl border border-slate-300 dark:border-slate-700 px-3 py-2.5 text-sm font-semibold text-slate-800 dark:text-slate-200 transition hover:border-slate-400 hover:bg-slate-50"
                     >
                       PDF
                     </button>
@@ -623,9 +623,9 @@ export default function InvoicesPage() {
           )}
         </div>
 
-        <div className="hidden overflow-hidden rounded-3xl border border-slate-200 bg-white shadow-sm md:block">
+        <div className="hidden overflow-hidden rounded-3xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 shadow-sm md:block">
           <table className="min-w-full divide-y divide-slate-200 text-sm">
-            <thead className="bg-slate-100/80 text-left text-slate-700">
+            <thead className="bg-slate-100/80 text-left text-slate-700 dark:text-slate-300">
               <tr>
                 <th className="px-5 py-4 font-semibold">Client</th>
                 <th className="px-5 py-4 font-semibold">Invoice #</th>
@@ -651,10 +651,10 @@ export default function InvoicesPage() {
                 <tr>
                   <td colSpan={7} className="px-4 py-12">
                     <div className="text-center">
-                      <p className="text-base font-semibold text-slate-900">
+                      <p className="text-base font-semibold text-slate-900 dark:text-slate-100">
                         No invoices yet
                       </p>
-                      <p className="mt-2 text-sm text-slate-600">
+                      <p className="mt-2 text-sm text-slate-600 dark:text-slate-400">
                         Create your first invoice to start tracking payments.
                       </p>
                       <Link
@@ -684,35 +684,35 @@ export default function InvoicesPage() {
                           <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-2xl bg-slate-900 text-sm font-bold text-white">
                             {getInitials(invoice.clientName)}
                           </div>
-                          <span className="font-semibold text-slate-950">
+                          <span className="font-semibold text-slate-950 dark:text-white">
                             {invoice.clientName}
                           </span>
                         </div>
                       </td>
 
-                      <td className="px-5 py-4 text-slate-700">
+                      <td className="px-5 py-4 text-slate-700 dark:text-slate-300">
                         <div className="flex items-center gap-2">
                           <span>{invoice.invoiceNumber}</span>
                           <button
                             onClick={() =>
                               handleCopyInvoiceNumber(invoice.invoiceNumber)
                             }
-                            className="rounded-lg border border-slate-200 px-2 py-1 text-xs font-semibold text-slate-700 transition hover:bg-slate-100"
+                            className="rounded-lg border border-slate-200 dark:border-slate-700 px-2 py-1 text-xs font-semibold text-slate-700 dark:text-slate-300 transition hover:bg-slate-100"
                           >
                             Copy
                           </button>
                         </div>
                       </td>
 
-                      <td className="px-5 py-4 text-slate-700">
+                      <td className="px-5 py-4 text-slate-700 dark:text-slate-300">
                         {invoice.issueDate || "-"}
                       </td>
 
-                      <td className="px-5 py-4 text-slate-700">
+                      <td className="px-5 py-4 text-slate-700 dark:text-slate-300">
                         {invoice.dueDate || "-"}
                       </td>
 
-                      <td className="px-5 py-4 font-bold text-slate-950">
+                      <td className="px-5 py-4 font-bold text-slate-950 dark:text-white">
                         ${invoice.total.toFixed(2)}
                       </td>
 
@@ -737,28 +737,28 @@ export default function InvoicesPage() {
                         <div className="flex flex-wrap items-center gap-2">
                           <Link
                             href={`/invoices/${invoice.id}`}
-                            className="rounded-xl border border-slate-300 px-3 py-2 text-sm font-semibold text-slate-800 transition hover:border-slate-400 hover:bg-slate-50"
+                            className="rounded-xl border border-slate-300 dark:border-slate-700 px-3 py-2 text-sm font-semibold text-slate-800 dark:text-slate-200 transition hover:border-slate-400 hover:bg-slate-50"
                           >
                             View
                           </Link>
 
                           <Link
                             href={`/invoices/${invoice.id}/edit`}
-                            className="rounded-xl border border-slate-300 px-3 py-2 text-sm font-semibold text-slate-800 transition hover:border-slate-400 hover:bg-slate-50"
+                            className="rounded-xl border border-slate-300 dark:border-slate-700 px-3 py-2 text-sm font-semibold text-slate-800 dark:text-slate-200 transition hover:border-slate-400 hover:bg-slate-50"
                           >
                             Edit
                           </Link>
 
                           <button
                             onClick={() => handleDuplicateInvoice(invoice)}
-                            className="rounded-xl border border-slate-300 px-3 py-2 text-sm font-semibold text-slate-800 transition hover:border-slate-400 hover:bg-slate-50"
+                            className="rounded-xl border border-slate-300 dark:border-slate-700 px-3 py-2 text-sm font-semibold text-slate-800 dark:text-slate-200 transition hover:border-slate-400 hover:bg-slate-50"
                           >
                             Duplicate
                           </button>
 
                           <button
                             onClick={() => handleDownloadPdf(invoice)}
-                            className="rounded-xl border border-slate-300 px-3 py-2 text-sm font-semibold text-slate-800 transition hover:border-slate-400 hover:bg-slate-50"
+                            className="rounded-xl border border-slate-300 dark:border-slate-700 px-3 py-2 text-sm font-semibold text-slate-800 dark:text-slate-200 transition hover:border-slate-400 hover:bg-slate-50"
                           >
                             PDF
                           </button>

@@ -31,9 +31,9 @@ export function useToast() {
 }
 
 const VARIANT_STYLES: Record<ToastVariant, string> = {
-  success: "border-emerald-200 bg-white text-slate-900",
-  error: "border-red-200 bg-white text-slate-900",
-  info: "border-slate-200 bg-white text-slate-900",
+  success: "border-emerald-200 bg-white dark:bg-slate-900 text-slate-900 dark:text-slate-100",
+  error: "border-red-200 bg-white dark:bg-slate-900 text-slate-900 dark:text-slate-100",
+  info: "border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 text-slate-900 dark:text-slate-100",
 };
 
 const VARIANT_ICONS: Record<ToastVariant, React.ReactNode> = {

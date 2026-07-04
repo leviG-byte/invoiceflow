@@ -52,7 +52,7 @@ export default function DescriptionField({
           value={value}
           placeholder={placeholder}
           onChange={(e) => onChange(e.target.value)}
-          className="w-full min-w-0 resize-y rounded-2xl border border-slate-300 bg-white px-4 py-3 pr-11 text-slate-900 placeholder-slate-400 shadow-sm outline-none transition focus:border-blue-500 focus:ring-4 focus:ring-blue-100"
+          className="w-full min-w-0 resize-y rounded-2xl border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-900 px-4 py-3 pr-11 text-slate-900 dark:text-slate-100 placeholder-slate-400 shadow-sm outline-none transition focus:border-blue-500 focus:ring-4 focus:ring-blue-100"
         />
 
         <button
@@ -78,9 +78,9 @@ export default function DescriptionField({
             onClick={() => setIsOpen(false)}
           />
 
-          <div className="relative w-full max-w-2xl rounded-3xl border border-slate-200 bg-white p-6 shadow-2xl">
-            <h2 className="text-lg font-semibold text-slate-950">{label}</h2>
-            <p className="mt-1 text-sm text-slate-500">
+          <div className="relative w-full max-w-2xl rounded-3xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 p-6 shadow-2xl">
+            <h2 className="text-lg font-semibold text-slate-950 dark:text-white">{label}</h2>
+            <p className="mt-1 text-sm text-slate-500 dark:text-slate-400">
               Write as much detail as you need — it will appear on the invoice
               and the PDF.
             </p>
@@ -91,14 +91,14 @@ export default function DescriptionField({
               value={draft}
               placeholder={placeholder}
               onChange={(e) => setDraft(e.target.value)}
-              className="mt-4 w-full resize-y rounded-2xl border border-slate-300 bg-white px-4 py-3 text-slate-900 placeholder-slate-400 shadow-sm outline-none transition focus:border-blue-500 focus:ring-4 focus:ring-blue-100"
+              className="mt-4 w-full resize-y rounded-2xl border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-900 px-4 py-3 text-slate-900 dark:text-slate-100 placeholder-slate-400 shadow-sm outline-none transition focus:border-blue-500 focus:ring-4 focus:ring-blue-100"
             />
 
             <div className="mt-4 flex justify-end gap-3">
               <button
                 type="button"
                 onClick={() => setIsOpen(false)}
-                className="rounded-2xl border border-slate-300 px-5 py-2.5 text-sm font-semibold text-slate-700 transition hover:bg-slate-50"
+                className="rounded-2xl border border-slate-300 dark:border-slate-700 px-5 py-2.5 text-sm font-semibold text-slate-700 dark:text-slate-300 transition hover:bg-slate-50"
               >
                 Cancel
               </button>

@@ -250,7 +250,7 @@ export default function ClientsPage() {
 
   return (
     <div className="space-y-6">
-      <div className="overflow-hidden rounded-3xl border border-slate-200 bg-white shadow-sm">
+      <div className="overflow-hidden rounded-3xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 shadow-sm">
         <div className="bg-gradient-to-r from-slate-950 via-slate-900 to-blue-950 px-5 py-6 sm:px-6 lg:px-8">
           <div className="flex flex-col gap-5 lg:flex-row lg:items-end lg:justify-between">
             <div className="min-w-0">
@@ -276,38 +276,38 @@ export default function ClientsPage() {
                   
                 }
               }}
-              className="inline-flex items-center justify-center rounded-2xl bg-white px-5 py-3 text-sm font-semibold text-slate-950 transition hover:bg-slate-100"
+              className="inline-flex items-center justify-center rounded-2xl bg-white dark:bg-slate-900 px-5 py-3 text-sm font-semibold text-slate-950 dark:text-white transition hover:bg-slate-100"
             >
               {showForm ? "Cancel" : "+ Add Client"}
             </button>
           </div>
         </div>
 
-        <div className="grid gap-4 border-t border-slate-200 bg-white px-5 py-5 sm:grid-cols-2 xl:grid-cols-4 sm:px-6 lg:px-8">
-          <div className="rounded-2xl border border-slate-200 bg-slate-50 p-5 transition hover:-translate-y-0.5 hover:bg-white hover:shadow-md">
-            <p className="text-sm font-medium text-slate-500">Total Clients</p>
-            <p className="mt-2 text-3xl font-bold text-slate-950">
+        <div className="grid gap-4 border-t border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 px-5 py-5 sm:grid-cols-2 xl:grid-cols-4 sm:px-6 lg:px-8">
+          <div className="rounded-2xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 p-5 transition hover:-translate-y-0.5 hover:bg-white hover:shadow-md">
+            <p className="text-sm font-medium text-slate-500 dark:text-slate-400">Total Clients</p>
+            <p className="mt-2 text-3xl font-bold text-slate-950 dark:text-white">
               {clients.length}
             </p>
           </div>
 
-          <div className="rounded-2xl border border-slate-200 bg-slate-50 p-5 transition hover:-translate-y-0.5 hover:bg-white hover:shadow-md">
-            <p className="text-sm font-medium text-slate-500">With Email</p>
-            <p className="mt-2 text-3xl font-bold text-slate-950">
+          <div className="rounded-2xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 p-5 transition hover:-translate-y-0.5 hover:bg-white hover:shadow-md">
+            <p className="text-sm font-medium text-slate-500 dark:text-slate-400">With Email</p>
+            <p className="mt-2 text-3xl font-bold text-slate-950 dark:text-white">
               {clientsWithEmail}
             </p>
           </div>
 
-          <div className="rounded-2xl border border-slate-200 bg-slate-50 p-5 transition hover:-translate-y-0.5 hover:bg-white hover:shadow-md">
-            <p className="text-sm font-medium text-slate-500">With Rate</p>
-            <p className="mt-2 text-3xl font-bold text-slate-950">
+          <div className="rounded-2xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 p-5 transition hover:-translate-y-0.5 hover:bg-white hover:shadow-md">
+            <p className="text-sm font-medium text-slate-500 dark:text-slate-400">With Rate</p>
+            <p className="mt-2 text-3xl font-bold text-slate-950 dark:text-white">
               {clientsWithRate}
             </p>
           </div>
 
-          <div className="rounded-2xl border border-slate-200 bg-slate-50 p-5 transition hover:-translate-y-0.5 hover:bg-white hover:shadow-md">
-            <p className="text-sm font-medium text-slate-500">Average Rate</p>
-            <p className="mt-2 text-3xl font-bold text-slate-950">
+          <div className="rounded-2xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 p-5 transition hover:-translate-y-0.5 hover:bg-white hover:shadow-md">
+            <p className="text-sm font-medium text-slate-500 dark:text-slate-400">Average Rate</p>
+            <p className="mt-2 text-3xl font-bold text-slate-950 dark:text-white">
               ${averageRate.toFixed(2)}
             </p>
           </div>
@@ -315,13 +315,13 @@ export default function ClientsPage() {
       </div>
 
       {showForm && (
-        <div className="rounded-3xl border border-slate-200 bg-white p-6 shadow-sm">
+        <div className="rounded-3xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 p-6 shadow-sm">
           <div className="mb-6 flex flex-col gap-2 sm:flex-row sm:items-end sm:justify-between">
             <div>
-              <h2 className="text-xl font-semibold text-slate-900">
+              <h2 className="text-xl font-semibold text-slate-900 dark:text-slate-100">
                 {editingClientId ? "Edit Client" : "New Client"}
               </h2>
-              <p className="mt-1 text-sm text-slate-500">
+              <p className="mt-1 text-sm text-slate-500 dark:text-slate-400">
                 Save the client’s contact information, billing rate, and payment
                 defaults.
               </p>
@@ -336,78 +336,78 @@ export default function ClientsPage() {
 
           <div className="grid gap-5 md:grid-cols-2">
             <div>
-              <label className="mb-2 block text-sm font-semibold text-slate-800">
+              <label className="mb-2 block text-sm font-semibold text-slate-800 dark:text-slate-200">
                 Client Name
               </label>
               <input
                 type="text"
                 value={name}
                 onChange={(e) => setName(e.target.value)}
-                className="w-full rounded-2xl border border-slate-300 bg-white px-4 py-3 text-slate-900 outline-none transition placeholder:text-slate-400 focus:border-blue-500 focus:ring-4 focus:ring-blue-100"
+                className="w-full rounded-2xl border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-900 px-4 py-3 text-slate-900 dark:text-slate-100 outline-none transition placeholder:text-slate-400 focus:border-blue-500 focus:ring-4 focus:ring-blue-100"
                 placeholder="Microsoft"
               />
             </div>
 
             <div>
-              <label className="mb-2 block text-sm font-semibold text-slate-800">
+              <label className="mb-2 block text-sm font-semibold text-slate-800 dark:text-slate-200">
                 Hourly Rate
               </label>
               <input
                 type="number"
                 value={rate}
                 onChange={(e) => setRate(e.target.value)}
-                className="w-full rounded-2xl border border-slate-300 bg-white px-4 py-3 text-slate-900 outline-none transition placeholder:text-slate-400 focus:border-blue-500 focus:ring-4 focus:ring-blue-100"
+                className="w-full rounded-2xl border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-900 px-4 py-3 text-slate-900 dark:text-slate-100 outline-none transition placeholder:text-slate-400 focus:border-blue-500 focus:ring-4 focus:ring-blue-100"
                 placeholder="30"
               />
             </div>
 
             <div>
-              <label className="mb-2 block text-sm font-semibold text-slate-800">
+              <label className="mb-2 block text-sm font-semibold text-slate-800 dark:text-slate-200">
                 Email
               </label>
               <input
                 type="email"
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
-                className="w-full rounded-2xl border border-slate-300 bg-white px-4 py-3 text-slate-900 outline-none transition placeholder:text-slate-400 focus:border-blue-500 focus:ring-4 focus:ring-blue-100"
+                className="w-full rounded-2xl border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-900 px-4 py-3 text-slate-900 dark:text-slate-100 outline-none transition placeholder:text-slate-400 focus:border-blue-500 focus:ring-4 focus:ring-blue-100"
                 placeholder="client@email.com"
               />
             </div>
 
             <div>
-              <label className="mb-2 block text-sm font-semibold text-slate-800">
+              <label className="mb-2 block text-sm font-semibold text-slate-800 dark:text-slate-200">
                 Phone
               </label>
               <input
                 type="text"
                 value={phone}
                 onChange={(e) => setPhone(e.target.value)}
-                className="w-full rounded-2xl border border-slate-300 bg-white px-4 py-3 text-slate-900 outline-none transition placeholder:text-slate-400 focus:border-blue-500 focus:ring-4 focus:ring-blue-100"
+                className="w-full rounded-2xl border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-900 px-4 py-3 text-slate-900 dark:text-slate-100 outline-none transition placeholder:text-slate-400 focus:border-blue-500 focus:ring-4 focus:ring-blue-100"
                 placeholder="123-456-7890"
               />
             </div>
 
             <div className="md:col-span-2">
-              <label className="mb-2 block text-sm font-semibold text-slate-800">
+              <label className="mb-2 block text-sm font-semibold text-slate-800 dark:text-slate-200">
                 Default Payment Method
               </label>
               <input
                 type="text"
                 value={defaultPaymentMethod}
                 onChange={(e) => setDefaultPaymentMethod(e.target.value)}
-                className="w-full rounded-2xl border border-slate-300 bg-white px-4 py-3 text-slate-900 outline-none transition placeholder:text-slate-400 focus:border-blue-500 focus:ring-4 focus:ring-blue-100"
+                className="w-full rounded-2xl border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-900 px-4 py-3 text-slate-900 dark:text-slate-100 outline-none transition placeholder:text-slate-400 focus:border-blue-500 focus:ring-4 focus:ring-blue-100"
                 placeholder="Zelle, Bank Transfer, Cash, PayPal"
               />
             </div>
 
             <div className="md:col-span-2">
-              <label className="mb-2 block text-sm font-semibold text-slate-800">
+              <label className="mb-2 block text-sm font-semibold text-slate-800 dark:text-slate-200">
                 Default Payment Notes
               </label>
               <textarea
                 value={defaultPaymentNotes}
                 onChange={(e) => setDefaultPaymentNotes(e.target.value)}
-                className="w-full rounded-2xl border border-slate-300 bg-white px-4 py-3 text-slate-900 outline-none transition placeholder:text-slate-400 focus:border-blue-500 focus:ring-4 focus:ring-blue-100"
+                className="w-full rounded-2xl border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-900 px-4 py-3 text-slate-900 dark:text-slate-100 outline-none transition placeholder:text-slate-400 focus:border-blue-500 focus:ring-4 focus:ring-blue-100"
                 placeholder="Bank: Chase | Zelle: email@email.com | Due in 7 days"
                 rows={4}
               />
@@ -430,7 +430,7 @@ export default function ClientsPage() {
             <button
               onClick={resetForm}
               type="button"
-              className="rounded-2xl border border-slate-300 px-5 py-3 text-sm font-semibold text-slate-700 transition hover:bg-slate-50"
+              className="rounded-2xl border border-slate-300 dark:border-slate-700 px-5 py-3 text-sm font-semibold text-slate-700 dark:text-slate-300 transition hover:bg-slate-50"
             >
               Cancel
             </button>
@@ -445,11 +445,11 @@ export default function ClientsPage() {
           <CardSkeleton lines={4} />
         </div>
       ) : clients.length === 0 ? (
-        <div className="rounded-3xl border border-slate-200 bg-white p-8 text-center shadow-sm">
-          <p className="text-base font-semibold text-slate-900">
+        <div className="rounded-3xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 p-8 text-center shadow-sm">
+          <p className="text-base font-semibold text-slate-900 dark:text-slate-100">
             No clients saved yet
           </p>
-          <p className="mt-2 text-sm text-slate-600">
+          <p className="mt-2 text-sm text-slate-600 dark:text-slate-400">
             Add your first client to start creating faster invoices with saved
             payment defaults.
           </p>
@@ -469,7 +469,7 @@ export default function ClientsPage() {
           {clients.map((client) => (
             <div
               key={client.id}
-              className="rounded-3xl border border-slate-200 bg-white p-5 shadow-sm transition hover:-translate-y-0.5 hover:shadow-md"
+              className="rounded-3xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 p-5 shadow-sm transition hover:-translate-y-0.5 hover:shadow-md"
             >
               <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
                 <div className="min-w-0">
@@ -484,11 +484,11 @@ export default function ClientsPage() {
                     </div>
 
                     <div className="min-w-0">
-                      <p className="break-words text-xl font-semibold text-slate-900 transition group-hover:text-blue-600">
+                      <p className="break-words text-xl font-semibold text-slate-900 dark:text-slate-100 transition group-hover:text-blue-600">
                         {client.name}
                       </p>
 
-                      <p className="mt-1 text-sm font-medium text-slate-500">
+                      <p className="mt-1 text-sm font-medium text-slate-500 dark:text-slate-400">
                         {client.rate ? `$${client.rate}/hr` : "No rate set"}
                       </p>
                     </div>
@@ -496,13 +496,13 @@ export default function ClientsPage() {
 
                   <div className="mt-4 space-y-1">
                     {client.email && (
-                      <p className="break-words text-sm text-slate-700">
+                      <p className="break-words text-sm text-slate-700 dark:text-slate-300">
                         {client.email}
                       </p>
                     )}
 
                     {client.phone && (
-                      <p className="text-sm text-slate-700">{client.phone}</p>
+                      <p className="text-sm text-slate-700 dark:text-slate-300">{client.phone}</p>
                     )}
                   </div>
                 </div>
@@ -517,7 +517,7 @@ export default function ClientsPage() {
 
                   <button
                     onClick={() => handleEditClient(client)}
-                    className="rounded-xl border border-slate-300 px-4 py-2 text-sm font-semibold text-slate-800 transition hover:border-slate-400 hover:bg-slate-50"
+                    className="rounded-xl border border-slate-300 dark:border-slate-700 px-4 py-2 text-sm font-semibold text-slate-800 dark:text-slate-200 transition hover:border-slate-400 hover:bg-slate-50"
                   >
                     Edit
                   </button>
@@ -532,10 +532,10 @@ export default function ClientsPage() {
               </div>
 
               {(client.defaultPaymentMethod || client.defaultPaymentNotes) && (
-                <div className="mt-5 rounded-2xl bg-slate-50 p-4">
+                <div className="mt-5 rounded-2xl bg-slate-50 dark:bg-slate-800 p-4">
                   {client.defaultPaymentMethod && (
-                    <p className="text-sm text-slate-700">
-                      <span className="font-semibold text-slate-900">
+                    <p className="text-sm text-slate-700 dark:text-slate-300">
+                      <span className="font-semibold text-slate-900 dark:text-slate-100">
                         Payment Method:
                       </span>{" "}
                       {client.defaultPaymentMethod}
@@ -543,8 +543,8 @@ export default function ClientsPage() {
                   )}
 
                   {client.defaultPaymentNotes && (
-                    <p className="mt-2 whitespace-pre-wrap text-sm text-slate-700">
-                      <span className="font-semibold text-slate-900">
+                    <p className="mt-2 whitespace-pre-wrap text-sm text-slate-700 dark:text-slate-300">
+                      <span className="font-semibold text-slate-900 dark:text-slate-100">
                         Payment Notes:
                       </span>{" "}
                       {client.defaultPaymentNotes}

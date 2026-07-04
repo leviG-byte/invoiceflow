@@ -1,6 +1,7 @@
 "use client";
 
 import LogoutButton from "@/components/LogoutButton";
+import ThemeToggle from "@/components/ThemeToggle";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import {
@@ -8,6 +9,7 @@ import {
   FileText,
   Users,
   Settings,
+  BarChart3,
   X,
 } from "lucide-react";
 
@@ -26,6 +28,7 @@ export default function Sidebar({
     { name: "Dashboard", href: "/dashboard", icon: LayoutDashboard },
     { name: "Invoices", href: "/invoices", icon: FileText },
     { name: "Clients", href: "/clients", icon: Users },
+    { name: "Reports", href: "/reports", icon: BarChart3 },
     { name: "Settings", href: "/settings", icon: Settings },
   ];
 
@@ -136,7 +139,10 @@ export default function Sidebar({
               <p className="mb-3 px-1 text-xs font-semibold uppercase tracking-[0.18em] text-slate-400">
                 Account
               </p>
-              <LogoutButton />
+              <div className="space-y-2">
+                <ThemeToggle />
+                <LogoutButton />
+              </div>
             </div>
           </div>
         </div>

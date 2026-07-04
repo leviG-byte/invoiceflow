@@ -268,7 +268,7 @@ export default function DashboardPage() {
 
   return (
     <div className="space-y-6">
-      <div className="overflow-hidden rounded-3xl border border-slate-200 bg-white shadow-sm">
+      <div className="overflow-hidden rounded-3xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 shadow-sm">
         <div className="bg-gradient-to-r from-slate-950 via-slate-900 to-blue-950 px-5 py-6 sm:px-6 lg:px-8">
           <div className="flex flex-col gap-5 lg:flex-row lg:items-end lg:justify-between">
             <div className="min-w-0">
@@ -287,7 +287,7 @@ export default function DashboardPage() {
             <div className="flex flex-wrap gap-3">
               <Link
                 href="/new-invoice"
-                className="rounded-2xl bg-white px-5 py-3 text-sm font-semibold text-slate-950 transition hover:bg-slate-100"
+                className="rounded-2xl bg-white dark:bg-slate-900 px-5 py-3 text-sm font-semibold text-slate-950 dark:text-white transition hover:bg-slate-100"
               >
                 + Create Invoice
               </Link>
@@ -302,7 +302,7 @@ export default function DashboardPage() {
           </div>
         </div>
 
-        <div className="grid gap-4 border-t border-slate-200 bg-white px-5 py-5 sm:grid-cols-2 xl:grid-cols-4 sm:px-6 lg:px-8">
+        <div className="grid gap-4 border-t border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 px-5 py-5 sm:grid-cols-2 xl:grid-cols-4 sm:px-6 lg:px-8">
           {isLoading ? (
             <>
               <StatCardSkeleton />
@@ -312,45 +312,45 @@ export default function DashboardPage() {
             </>
           ) : (
             <>
-          <div className="rounded-2xl border border-slate-200 bg-slate-50 p-5 transition hover:-translate-y-0.5 hover:bg-white hover:shadow-md">
-            <p className="text-sm font-medium text-slate-500">Total Revenue</p>
-            <p className="mt-2 text-3xl font-bold text-slate-950">
+          <div className="rounded-2xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 p-5 transition hover:-translate-y-0.5 hover:bg-white hover:shadow-md">
+            <p className="text-sm font-medium text-slate-500 dark:text-slate-400">Total Revenue</p>
+            <p className="mt-2 text-3xl font-bold text-slate-950 dark:text-white">
               ${dashboardStats.totalRevenue.toFixed(2)}
             </p>
-            <p className="mt-2 text-xs text-slate-500">
+            <p className="mt-2 text-xs text-slate-500 dark:text-slate-400">
               Across {dashboardStats.totalInvoices} invoice
               {dashboardStats.totalInvoices === 1 ? "" : "s"}
             </p>
           </div>
 
           <div className="rounded-2xl border border-green-200 bg-green-50/40 p-5 transition hover:-translate-y-0.5 hover:bg-white hover:shadow-md">
-            <p className="text-sm font-medium text-slate-500">Paid Revenue</p>
+            <p className="text-sm font-medium text-slate-500 dark:text-slate-400">Paid Revenue</p>
             <p className="mt-2 text-3xl font-bold text-green-600">
               ${dashboardStats.paidRevenue.toFixed(2)}
             </p>
-            <p className="mt-2 text-xs text-slate-500">
+            <p className="mt-2 text-xs text-slate-500 dark:text-slate-400">
               {dashboardStats.paidCount} paid invoice
               {dashboardStats.paidCount === 1 ? "" : "s"}
             </p>
           </div>
 
           <div className="rounded-2xl border border-amber-200 bg-amber-50/40 p-5 transition hover:-translate-y-0.5 hover:bg-white hover:shadow-md">
-            <p className="text-sm font-medium text-slate-500">Pending Revenue</p>
+            <p className="text-sm font-medium text-slate-500 dark:text-slate-400">Pending Revenue</p>
             <p className="mt-2 text-3xl font-bold text-amber-600">
               ${dashboardStats.pendingRevenue.toFixed(2)}
             </p>
-            <p className="mt-2 text-xs text-slate-500">
+            <p className="mt-2 text-xs text-slate-500 dark:text-slate-400">
               {dashboardStats.pendingCount} pending invoice
               {dashboardStats.pendingCount === 1 ? "" : "s"}
             </p>
           </div>
 
           <div className="rounded-2xl border border-red-200 bg-red-50/40 p-5 transition hover:-translate-y-0.5 hover:bg-white hover:shadow-md">
-            <p className="text-sm font-medium text-slate-500">Overdue Revenue</p>
+            <p className="text-sm font-medium text-slate-500 dark:text-slate-400">Overdue Revenue</p>
             <p className="mt-2 text-3xl font-bold text-red-600">
               ${dashboardStats.overdueRevenue.toFixed(2)}
             </p>
-            <p className="mt-2 text-xs text-slate-500">
+            <p className="mt-2 text-xs text-slate-500 dark:text-slate-400">
               {dashboardStats.overdueCount} overdue invoice
               {dashboardStats.overdueCount === 1 ? "" : "s"}
             </p>
@@ -361,12 +361,12 @@ export default function DashboardPage() {
       </div>
 
       <div className="grid gap-6 xl:grid-cols-3">
-        <div className="rounded-3xl border border-slate-200 bg-white p-6 shadow-sm xl:col-span-2">
+        <div className="rounded-3xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 p-6 shadow-sm xl:col-span-2">
           <div className="mb-6">
-            <h2 className="text-xl font-semibold text-slate-950">
+            <h2 className="text-xl font-semibold text-slate-950 dark:text-white">
               Last 6 Months Revenue
             </h2>
-            <p className="mt-1 text-sm text-slate-500">
+            <p className="mt-1 text-sm text-slate-500 dark:text-slate-400">
               A quick look at how the business is trending.
             </p>
           </div>
@@ -374,7 +374,7 @@ export default function DashboardPage() {
           {isLoading ? (
             <CardSkeleton lines={6} />
           ) : monthlyRevenue.every((item) => item.amount === 0) ? (
-            <p className="text-sm text-slate-500">
+            <p className="text-sm text-slate-500 dark:text-slate-400">
               No revenue data yet for the last 6 months.
             </p>
           ) : (
@@ -423,11 +423,11 @@ export default function DashboardPage() {
           )}
         </div>
 
-        <div className="rounded-3xl border border-slate-200 bg-white p-6 shadow-sm">
-          <h2 className="text-xl font-semibold text-slate-950">
+        <div className="rounded-3xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 p-6 shadow-sm">
+          <h2 className="text-xl font-semibold text-slate-950 dark:text-white">
             Invoice Health
           </h2>
-          <p className="mt-1 text-sm text-slate-500">
+          <p className="mt-1 text-sm text-slate-500 dark:text-slate-400">
             How your invoices are currently performing.
           </p>
 
@@ -460,7 +460,7 @@ export default function DashboardPage() {
               return (
                 <div key={item.label}>
                   <div className="mb-2 flex items-center justify-between text-sm">
-                    <span className="font-medium text-slate-700">
+                    <span className="font-medium text-slate-700 dark:text-slate-300">
                       {item.label}
                     </span>
                     <span className={`font-semibold ${item.text}`}>
@@ -468,7 +468,7 @@ export default function DashboardPage() {
                     </span>
                   </div>
 
-                  <div className="h-3 overflow-hidden rounded-full bg-slate-100">
+                  <div className="h-3 overflow-hidden rounded-full bg-slate-100 dark:bg-slate-950">
                     <div
                       className={`h-full rounded-full ${item.color}`}
                       style={{ width }}
@@ -479,9 +479,9 @@ export default function DashboardPage() {
             })}
           </div>
 
-          <div className="mt-8 rounded-2xl bg-slate-50 p-4">
-            <p className="text-sm text-slate-500">Collection Rate</p>
-            <p className="mt-2 text-2xl font-bold text-slate-950">
+          <div className="mt-8 rounded-2xl bg-slate-50 dark:bg-slate-800 p-4">
+            <p className="text-sm text-slate-500 dark:text-slate-400">Collection Rate</p>
+            <p className="mt-2 text-2xl font-bold text-slate-950 dark:text-white">
               {dashboardStats.totalRevenue > 0
                 ? `${Math.round(
                     (dashboardStats.paidRevenue / dashboardStats.totalRevenue) *
@@ -494,11 +494,11 @@ export default function DashboardPage() {
       </div>
 
       <div className="grid gap-6 xl:grid-cols-2">
-        <div className="rounded-3xl border border-slate-200 bg-white p-6 shadow-sm">
-          <h2 className="text-xl font-semibold text-slate-950">
+        <div className="rounded-3xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 p-6 shadow-sm">
+          <h2 className="text-xl font-semibold text-slate-950 dark:text-white">
             Current Year Revenue
           </h2>
-          <p className="mt-1 text-sm text-slate-500">
+          <p className="mt-1 text-sm text-slate-500 dark:text-slate-400">
             Month-by-month performance this year.
           </p>
 
@@ -507,7 +507,7 @@ export default function DashboardPage() {
               <CardSkeleton lines={5} />
             </div>
           ) : currentYearRevenue.every((item) => item.amount === 0) ? (
-            <p className="mt-6 text-sm text-slate-500">
+            <p className="mt-6 text-sm text-slate-500 dark:text-slate-400">
               No yearly revenue data yet.
             </p>
           ) : (
@@ -562,11 +562,11 @@ export default function DashboardPage() {
           )}
         </div>
 
-        <div className="rounded-3xl border border-slate-200 bg-white p-6 shadow-sm">
-          <h2 className="text-xl font-semibold text-slate-950">
+        <div className="rounded-3xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 p-6 shadow-sm">
+          <h2 className="text-xl font-semibold text-slate-950 dark:text-white">
             Top Clients
           </h2>
-          <p className="mt-1 text-sm text-slate-500">
+          <p className="mt-1 text-sm text-slate-500 dark:text-slate-400">
             Clients bringing in the most revenue.
           </p>
 
@@ -575,7 +575,7 @@ export default function DashboardPage() {
               <CardSkeleton lines={4} />
             </div>
           ) : topClients.length === 0 ? (
-            <p className="mt-6 text-sm text-slate-500">
+            <p className="mt-6 text-sm text-slate-500 dark:text-slate-400">
               No client revenue data yet.
             </p>
           ) : (
@@ -589,15 +589,15 @@ export default function DashboardPage() {
                 return (
                   <div key={client.clientName}>
                     <div className="mb-1 flex items-center justify-between text-sm">
-                      <span className="font-medium text-slate-700">
+                      <span className="font-medium text-slate-700 dark:text-slate-300">
                         {client.clientName}
                       </span>
-                      <span className="font-semibold text-slate-900">
+                      <span className="font-semibold text-slate-900 dark:text-slate-100">
                         ${client.total.toFixed(2)}
                       </span>
                     </div>
 
-                    <div className="h-3 overflow-hidden rounded-full bg-slate-100">
+                    <div className="h-3 overflow-hidden rounded-full bg-slate-100 dark:bg-slate-950">
                       <div
                         className="h-full rounded-full bg-violet-600"
                         style={{
@@ -613,13 +613,13 @@ export default function DashboardPage() {
         </div>
       </div>
 
-      <div className="rounded-3xl border border-slate-200 bg-white p-6 shadow-sm">
+      <div className="rounded-3xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 p-6 shadow-sm">
         <div className="mb-4 flex items-center justify-between gap-4">
           <div>
-            <h2 className="text-xl font-semibold text-slate-950">
+            <h2 className="text-xl font-semibold text-slate-950 dark:text-white">
               Recent Invoices
             </h2>
-            <p className="mt-1 text-sm text-slate-500">
+            <p className="mt-1 text-sm text-slate-500 dark:text-slate-400">
               Your latest invoice activity.
             </p>
           </div>
@@ -635,7 +635,7 @@ export default function DashboardPage() {
         {isLoading ? (
           <CardSkeleton lines={4} />
         ) : recentInvoices.length === 0 ? (
-          <p className="text-sm text-slate-500">
+          <p className="text-sm text-slate-500 dark:text-slate-400">
             No invoices found yet. Create your first invoice to start tracking
             progress.
           </p>
@@ -648,20 +648,20 @@ export default function DashboardPage() {
               return (
                 <div
                   key={invoice.id}
-                  className="rounded-2xl border border-slate-200 p-4 transition hover:bg-slate-50"
+                  className="rounded-2xl border border-slate-200 dark:border-slate-700 p-4 transition hover:bg-slate-50"
                 >
                   <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
                     <Link href={`/invoices/${invoice.id}`} className="block">
-                      <p className="font-semibold text-slate-950">
+                      <p className="font-semibold text-slate-950 dark:text-white">
                         {invoice.invoice_number}
                       </p>
-                      <p className="text-sm text-slate-600">
+                      <p className="text-sm text-slate-600 dark:text-slate-400">
                         {invoice.client_name}
                       </p>
                     </Link>
 
                     <div className="flex flex-wrap items-center gap-3">
-                      <span className="text-sm font-semibold text-slate-900">
+                      <span className="text-sm font-semibold text-slate-900 dark:text-slate-100">
                         ${(Number(invoice.total) || 0).toFixed(2)}
                       </span>
 
@@ -678,21 +678,21 @@ export default function DashboardPage() {
                   <div className="mt-4 flex flex-wrap gap-2">
                     <Link
                       href={`/invoices/${invoice.id}`}
-                      className="rounded-xl border border-slate-300 px-3 py-2 text-sm font-medium text-slate-800 transition hover:bg-slate-100"
+                      className="rounded-xl border border-slate-300 dark:border-slate-700 px-3 py-2 text-sm font-medium text-slate-800 dark:text-slate-200 transition hover:bg-slate-100"
                     >
                       View
                     </Link>
 
                     <Link
                       href={`/invoices/${invoice.id}/edit`}
-                      className="rounded-xl border border-slate-300 px-3 py-2 text-sm font-medium text-slate-800 transition hover:bg-slate-100"
+                      className="rounded-xl border border-slate-300 dark:border-slate-700 px-3 py-2 text-sm font-medium text-slate-800 dark:text-slate-200 transition hover:bg-slate-100"
                     >
                       Edit
                     </Link>
 
                     <button
                       onClick={() => handleDownloadPdf(invoice.id)}
-                      className="rounded-xl border border-slate-300 px-3 py-2 text-sm font-medium text-slate-800 transition hover:bg-slate-100"
+                      className="rounded-xl border border-slate-300 dark:border-slate-700 px-3 py-2 text-sm font-medium text-slate-800 dark:text-slate-200 transition hover:bg-slate-100"
                     >
                       PDF
                     </button>

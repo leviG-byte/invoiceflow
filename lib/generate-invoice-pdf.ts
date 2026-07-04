@@ -1,11 +1,14 @@
 import jsPDF from "jspdf";
 import {
+  DEFAULT_ACCENT,
   InvoiceItem,
   SavedInvoice,
+  accentTextColor,
   calculateInvoiceTotals,
   getDisplayStatus,
   getItemAmount,
   getItemType,
+  hexToRgb,
   sortItemsByDate,
 } from "@/lib/invoice-utils";
 
@@ -15,6 +18,9 @@ export type BusinessProfilePdf = {
   phone: string;
   address: string;
   logoUrl?: string;
+  accentColor?: string;
+  logoPosition?: "left" | "center";
+  showItemDates?: boolean;
 };
 
 export type PdfInvoice = SavedInvoice & {
@@ -89,10 +95,17 @@ export async function generateInvoicePdf(
   const isPaid = displayStatus === "Paid";
   const paymentDate = invoice.paymentDate;
 
+  const accentHex = businessProfile.accentColor || DEFAULT_ACCENT;
+  const [ar, ag, ab] = hexToRgb(accentHex);
+  const accentTxt = accentTextColor(accentHex);
+  const showDates = businessProfile.showItemDates !== false;
+
   // HEADER TITLE
   pdf.setFont("helvetica", "bold");
   pdf.setFontSize(26);
+  pdf.setTextColor(ar, ag, ab);
   pdf.text("INVOICE", right, 20, { align: "right" });
+  pdf.setTextColor(0);
 
   // STATUS BADGE
   pdf.setFontSize(10);
@@ -151,8 +164,11 @@ export async function generateInvoicePdf(
     contactY = drawWrappedText(pdf, businessProfile.address, left, contactY, 65, 5);
   }
 
-  pdf.setDrawColor(225, 225, 225);
+  pdf.setDrawColor(ar, ag, ab);
+  pdf.setLineWidth(0.6);
   pdf.line(left, 42, right, 42);
+  pdf.setLineWidth(0.2);
+  pdf.setDrawColor(225, 225, 225);
 
   // RIGHT INFO BLOCK
   pdf.setFont("helvetica", "bold");
@@ -195,7 +211,17 @@ export async function generateInvoicePdf(
   // description the extra width.
   const allFixed =
     items.length > 0 && items.every((item) => getItemType(item) === "fixed");
-  const descriptionWidth = allFixed ? 110 : 68;
+
+  // Description starts where the Date column would be when dates are hidden,
+  // and takes the reclaimed width.
+  const descX = showDates ? 48 : 24;
+  const descriptionWidth = allFixed
+    ? showDates
+      ? 110
+      : 134
+    : showDates
+    ? 68
+    : 92;
 
   pdf.setFillColor(243, 244, 246);
   pdf.rect(left, tableTop, 170, 10, "F");
@@ -203,8 +229,8 @@ export async function generateInvoicePdf(
   pdf.setFont("helvetica", "bold");
   pdf.setFontSize(9);
 
-  pdf.text("Date", 24, tableTop + 6.5);
-  pdf.text("Description", 48, tableTop + 6.5);
+  if (showDates) pdf.text("Date", 24, tableTop + 6.5);
+  pdf.text("Description", descX, tableTop + 6.5);
 
   if (!allFixed) {
     pdf.text("Hours", 126, tableTop + 6.5);
@@ -232,8 +258,8 @@ export async function generateInvoicePdf(
       pdf.rect(left, y - 5, 170, rowHeight, "F");
     }
 
-    pdf.text(safeText(item.date), 24, y);
-    pdf.text(descriptionLines, 48, y);
+    if (showDates) pdf.text(safeText(item.date), 24, y);
+    pdf.text(descriptionLines, descX, y);
 
     if (!allFixed) {
       pdf.text(isFixed ? "-" : String(Number(item.hours) || 0), 128, y);
@@ -276,20 +302,28 @@ export async function generateInvoicePdf(
       y += 6;
     }
 
+    const [tr, tg, tb] = hexToRgb(accentTxt);
+    pdf.setFillColor(ar, ag, ab);
+    pdf.rect(120, y - 4, 70, 10, "F");
+    pdf.setTextColor(tr, tg, tb);
     pdf.setFont("helvetica", "bold");
     pdf.setFontSize(12);
-    pdf.text("Total", 125, y + 2);
-    pdf.text(money(invoice.total), right, y + 2, { align: "right" });
+    pdf.text("Total", 125, y + 2.5);
+    pdf.text(money(invoice.total), right, y + 2.5, { align: "right" });
+    pdf.setTextColor(0);
     y += 4;
   } else {
-    pdf.setFillColor(249, 250, 251);
+    const [tr, tg, tb] = hexToRgb(accentTxt);
+    pdf.setFillColor(ar, ag, ab);
     pdf.rect(120, y - 6, 70, 14, "F");
 
+    pdf.setTextColor(tr, tg, tb);
     pdf.setFont("helvetica", "bold");
     pdf.setFontSize(12);
 
     pdf.text("Total", 125, y + 2);
     pdf.text(money(invoice.total), right, y + 2, { align: "right" });
+    pdf.setTextColor(0);
   }
 
   // PAYMENT NOTES
