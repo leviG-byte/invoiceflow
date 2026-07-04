@@ -1,7 +1,9 @@
 @import "tailwindcss";
 
-/* Class-based dark mode (toggled by adding `.dark` to <html>). */
-@custom-variant dark (&:where(.dark, .dark *));
+/* Class-based dark mode (toggled by adding `.dark` to <html>).
+   Elements inside a `.force-light` subtree opt out of dark styling — used so
+   the invoice document always renders on white "paper" regardless of theme. */
+@custom-variant dark (&:where(.dark, .dark *):not(:where(.force-light, .force-light *)));
 
 :root {
   --background: #ffffff;

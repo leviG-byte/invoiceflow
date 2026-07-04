@@ -428,8 +428,8 @@ export default function InvoiceDetailPage() {
         </div>
       </div>
 
-      {/* The invoice document */}
-      <div className="relative overflow-hidden rounded-3xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 shadow-sm">
+      {/* The invoice document — always renders on white "paper", even in dark mode */}
+      <div className="force-light relative overflow-hidden rounded-3xl border border-slate-200 bg-white shadow-sm">
         {/* Top accent */}
         {hasCustomAccent ? (
           <div className="h-2" style={{ background: accent }} />
