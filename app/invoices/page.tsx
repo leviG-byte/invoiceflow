@@ -15,6 +15,7 @@ import {
 import { useToast } from "@/components/ui/Toast";
 import ConfirmDialog from "@/components/ui/ConfirmDialog";
 import { StatCardSkeleton, TableRowSkeleton } from "@/components/ui/Skeleton";
+import { syncReceiptForInvoice } from "@/lib/receipt-record";
 
 type DatabaseInvoiceRow = {
   id: string;
@@ -153,9 +154,12 @@ export default function InvoicesPage() {
       return;
     }
 
+    const today = new Date().toISOString().split("T")[0];
+    const paymentDate = statusValue === "Paid" ? today : null;
+
     const { error } = await supabase
       .from("invoices")
-      .update({ status: statusValue })
+      .update({ status: statusValue, payment_date: paymentDate })
       .eq("id", invoice.id)
       .eq("user_id", user.id);
 
@@ -165,12 +169,28 @@ export default function InvoicesPage() {
       return;
     }
 
+    // Record or clear the receipt to match the new paid state.
+    await syncReceiptForInvoice(supabase, user.id, {
+      id: invoice.id,
+      invoiceNumber: invoice.invoiceNumber,
+      clientName: invoice.clientName,
+      total: invoice.total,
+      isPaid: statusValue === "Paid",
+      paymentDate,
+      paymentMethod: null,
+    });
+
     const updatedInvoices = invoices.map((item) =>
       item.id === invoice.id ? { ...item, status: statusValue } : item
     );
 
     setInvoices(updatedInvoices);
-    toast(`Invoice ${invoice.invoiceNumber} updated to ${newStatus}.`, "success");
+    toast(
+      statusValue === "Paid"
+        ? `Invoice ${invoice.invoiceNumber} marked Paid. Receipt recorded.`
+        : `Invoice ${invoice.invoiceNumber} updated to ${newStatus}.`,
+      "success"
+    );
   }
 
   function handleDownloadPdf(invoice: UIInvoice) {

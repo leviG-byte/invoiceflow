@@ -10,6 +10,8 @@ import {
   LayoutDashboard,
   Settings,
   BarChart3,
+  ReceiptText,
+  ScrollText,
   Plus,
 } from "lucide-react";
 
@@ -43,6 +45,27 @@ const NAV_ITEMS: Item[] = [
     href: "/new-invoice",
     icon: <Plus size={16} />,
     keywords: "new invoice create add",
+  },
+  {
+    id: "nav-receipts",
+    label: "Receipts",
+    href: "/receipts",
+    icon: <ReceiptText size={16} />,
+    keywords: "receipts paid payment confirmation",
+  },
+  {
+    id: "nav-bills",
+    label: "Bills of Sale",
+    href: "/bills",
+    icon: <ScrollText size={16} />,
+    keywords: "bill of sale bos goods transfer as-is sell",
+  },
+  {
+    id: "nav-new-bill",
+    label: "New Bill of Sale",
+    href: "/bills/new",
+    icon: <Plus size={16} />,
+    keywords: "new bill of sale create add bos",
   },
   {
     id: "nav-clients",
@@ -109,7 +132,7 @@ export default function CommandPalette() {
       } = await supabase.auth.getUser();
       if (!user) return;
 
-      const [inv, cli] = await Promise.all([
+      const [inv, cli, bos] = await Promise.all([
         supabase
           .from("invoices")
           .select("id, invoice_number, client_name")
@@ -118,6 +141,11 @@ export default function CommandPalette() {
         supabase
           .from("clients")
           .select("id, name, email")
+          .eq("user_id", user.id)
+          .order("created_at", { ascending: false }),
+        supabase
+          .from("bills_of_sale")
+          .select("id, bill_number, buyer_name")
           .eq("user_id", user.id)
           .order("created_at", { ascending: false }),
       ]);
@@ -140,7 +168,16 @@ export default function CommandPalette() {
         keywords: `${r.name} ${r.email} client`.toLowerCase(),
       }));
 
-      setData([...invoiceItems, ...clientItems]);
+      const billItems: Item[] = (bos.data || []).map((r) => ({
+        id: `bos-${r.id}`,
+        label: r.bill_number || "Bill of Sale",
+        sublabel: r.buyer_name || undefined,
+        href: `/bills/${r.id}`,
+        icon: <ScrollText size={16} />,
+        keywords: `${r.bill_number} ${r.buyer_name} bill of sale`.toLowerCase(),
+      }));
+
+      setData([...invoiceItems, ...clientItems, ...billItems]);
       setLoaded(true);
     })();
   }, [open, loaded, supabase]);

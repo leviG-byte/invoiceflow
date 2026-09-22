@@ -21,6 +21,7 @@ import {
 import { useToast } from "@/components/ui/Toast";
 import ConfirmDialog from "@/components/ui/ConfirmDialog";
 import DescriptionField from "@/components/ui/DescriptionField";
+import { syncReceiptForInvoice } from "@/lib/receipt-record";
 
 type SavedClient = {
   id: string;
@@ -553,9 +554,27 @@ export default function NewInvoicePage() {
     const newInvoice = mapDatabaseInvoiceToUI(data as DatabaseInvoiceRow);
     const updatedInvoices = [newInvoice, ...savedInvoices];
 
+    // An invoice created already-Paid gets its receipt record right away.
+    if (finalStatus === "Paid") {
+      await syncReceiptForInvoice(supabase, user.id, {
+        id: newInvoice.id,
+        invoiceNumber: newInvoice.invoiceNumber,
+        clientName: newInvoice.clientName,
+        total: newInvoice.total,
+        isPaid: true,
+        paymentDate: newInvoice.paymentDate || null,
+        paymentMethod: newInvoice.paymentMethod || null,
+      });
+    }
+
     setSavedInvoices(updatedInvoices);
     setPreviewInvoice(newInvoice);
-    toast(`Invoice ${normalizedInvoiceNumber} saved.`, "success");
+    toast(
+      finalStatus === "Paid"
+        ? `Invoice ${normalizedInvoiceNumber} saved. Receipt recorded.`
+        : `Invoice ${normalizedInvoiceNumber} saved.`,
+      "success"
+    );
 
     setInvoiceNumber(findNextAvailableInvoiceNumber(updatedInvoices));
     setClientName("");
@@ -665,6 +684,22 @@ export default function NewInvoicePage() {
       console.error(error);
       toast("Error updating invoice status.", "error");
       return;
+    }
+
+    const sourceInvoice = savedInvoices.find(
+      (invoice) => invoice.id === invoiceId
+    );
+
+    if (sourceInvoice) {
+      await syncReceiptForInvoice(supabase, user.id, {
+        id: invoiceId,
+        invoiceNumber: sourceInvoice.invoiceNumber,
+        clientName: sourceInvoice.clientName,
+        total: sourceInvoice.total,
+        isPaid: newStatus === "Paid",
+        paymentDate: newStatus === "Paid" ? today : null,
+        paymentMethod: sourceInvoice.paymentMethod || null,
+      });
     }
 
     const updatedInvoices = savedInvoices.map((invoice) =>

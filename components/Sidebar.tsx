@@ -10,6 +10,8 @@ import {
   Users,
   Settings,
   BarChart3,
+  ReceiptText,
+  ScrollText,
   X,
 } from "lucide-react";
 
@@ -27,6 +29,8 @@ export default function Sidebar({
   const links = [
     { name: "Dashboard", href: "/dashboard", icon: LayoutDashboard },
     { name: "Invoices", href: "/invoices", icon: FileText },
+    { name: "Receipts", href: "/receipts", icon: ReceiptText },
+    { name: "Bills of Sale", href: "/bills", icon: ScrollText },
     { name: "Clients", href: "/clients", icon: Users },
     { name: "Reports", href: "/reports", icon: BarChart3 },
     { name: "Settings", href: "/settings", icon: Settings },

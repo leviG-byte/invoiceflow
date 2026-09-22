@@ -15,6 +15,7 @@ import {
 } from "@/lib/invoice-utils";
 import { useToast } from "@/components/ui/Toast";
 import DescriptionField from "@/components/ui/DescriptionField";
+import { syncReceiptForInvoice } from "@/lib/receipt-record";
 
 type SavedClient = {
   id: string;
@@ -345,7 +346,24 @@ export default function EditInvoicePage() {
       return;
     }
 
-    toast("Invoice updated successfully.", "success");
+    // Keep a receipt record in sync: created when the invoice is Paid,
+    // removed if it moves back to Pending.
+    await syncReceiptForInvoice(supabase, user.id, {
+      id,
+      invoiceNumber,
+      clientName,
+      total,
+      isPaid: finalStatus === "Paid",
+      paymentDate: paymentDate || null,
+      paymentMethod: paymentMethod || null,
+    });
+
+    toast(
+      finalStatus === "Paid"
+        ? "Invoice updated. Receipt saved to Receipts."
+        : "Invoice updated successfully.",
+      "success"
+    );
 
     setTimeout(() => {
       router.push(`/invoices/${id}`);
