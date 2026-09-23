@@ -80,36 +80,37 @@ export async function generateBillOfSalePdf(
   pdf.setFillColor(ar, ag, ab);
   pdf.rect(0, 0, pageWidth, 6, "F");
 
-  // TITLE
+  // TITLE (top-right)
   pdf.setFont("helvetica", "bold");
-  pdf.setFontSize(24);
+  pdf.setFontSize(22);
   pdf.setTextColor(ar, ag, ab);
-  pdf.text("BILL OF SALE", right, 22, { align: "right" });
+  pdf.text("BILL OF SALE", right, 24, { align: "right" });
   pdf.setTextColor(0);
 
-  // SELLER (business) identity, left
-  let headerLeftY = 20;
-
+  // LETTERHEAD (top-left): optional logo, business name, contact lines. The
+  // block flows from a cursor so a logo never pushes the contact info onto the
+  // divider.
+  let logoBottom = 0;
   if (businessProfile.logoUrl) {
     try {
       const { dataUrl, format } = await loadImageAsDataUrl(
         businessProfile.logoUrl
       );
-      pdf.addImage(dataUrl, format, left, 12, 38, 18);
-      headerLeftY = 36;
+      pdf.addImage(dataUrl, format, left, 12, 34, 16);
+      logoBottom = 28;
     } catch (error) {
       console.error("Bill of sale logo load error:", error);
     }
   }
 
+  const leftY = logoBottom ? logoBottom + 6 : 22;
   pdf.setFont("helvetica", "bold");
-  pdf.setFontSize(16);
-  pdf.text(businessProfile.businessName || "InvoiceFlow", left, headerLeftY);
+  pdf.setFontSize(15);
+  pdf.text(businessProfile.businessName || "InvoiceFlow", left, leftY);
 
   pdf.setFont("helvetica", "normal");
-  pdf.setFontSize(10);
-  let contactY = headerLeftY + 6;
-
+  pdf.setFontSize(9.5);
+  let contactY = leftY + 5.5;
   if (businessProfile.email) {
     pdf.text(businessProfile.email, left, contactY);
     contactY += 5;
@@ -119,26 +120,42 @@ export async function generateBillOfSalePdf(
     contactY += 5;
   }
   if (businessProfile.address) {
-    contactY = drawWrappedText(pdf, businessProfile.address, left, contactY, 65, 5);
+    contactY = drawWrappedText(pdf, businessProfile.address, left, contactY, 78, 4.6);
   }
+  const leftBottom = contactY;
 
+  // META rows sit directly under the title on the right. The label is
+  // left-aligned and the value has its own left-aligned column that wraps, so a
+  // long value (e.g. a spelled-out payment method) never overruns the label.
+  const metaRows: [string, string][] = [
+    ["Document No.", safeText(bill.billNumber)],
+    ["Sale Date", safeText(bill.saleDate)],
+    ["Payment Method", safeText(bill.paymentMethod)],
+  ];
+  const metaLabelX = 118;
+  const metaValueX = 152;
+  const metaValueWidth = right - metaValueX;
+  let metaY = 36;
+  metaRows.forEach(([label, value]) => {
+    pdf.setFont("helvetica", "bold");
+    pdf.setFontSize(9.5);
+    pdf.setTextColor(90);
+    pdf.text(label, metaLabelX, metaY);
+    pdf.setFont("helvetica", "normal");
+    pdf.setTextColor(0);
+    const valueLines = pdf.splitTextToSize(value, metaValueWidth);
+    pdf.text(valueLines, metaValueX, metaY);
+    metaY += Math.max(6.5, valueLines.length * 4.6);
+  });
+  const rightBottom = metaY;
+
+  // Divider drops below whichever column is taller.
+  const dividerY = Math.max(leftBottom, rightBottom, 44) + 5;
   pdf.setDrawColor(ar, ag, ab);
   pdf.setLineWidth(0.6);
-  pdf.line(left, 42, right, 42);
+  pdf.line(left, dividerY, right, dividerY);
   pdf.setLineWidth(0.2);
   pdf.setDrawColor(225, 225, 225);
-
-  // RIGHT INFO BLOCK
-  pdf.setFont("helvetica", "bold");
-  pdf.setFontSize(10);
-  pdf.text("Document No.", 135, 52);
-  pdf.text("Sale Date", 135, 60);
-  pdf.text("Payment Method", 135, 68);
-
-  pdf.setFont("helvetica", "normal");
-  pdf.text(safeText(bill.billNumber), right, 52, { align: "right" });
-  pdf.text(safeText(bill.saleDate), right, 60, { align: "right" });
-  pdf.text(safeText(bill.paymentMethod), right, 68, { align: "right" });
 
   // The business (owner) sits on one side; the counterparty on the other.
   // Swap by role so a purchase prints with the business as the buyer.
@@ -157,8 +174,23 @@ export async function generateBillOfSalePdf(
   const seller = bill.businessRole === "buyer" ? counterParty : businessParty;
   const buyer = bill.businessRole === "buyer" ? businessParty : counterParty;
 
-  // SELLER + BUYER blocks
-  const blockTop = 84;
+  // SELLER + BUYER blocks — boxes size to their content and sit below the
+  // divider, so a long address no longer spills out of a fixed-height box.
+  const blockTop = dividerY + 16;
+
+  function partyBoxHeight(party: {
+    email: string;
+    phone: string;
+    address: string;
+  }) {
+    const addrLines = party.address
+      ? pdf.splitTextToSize(party.address, 74).length
+      : 0;
+    const belowName = (party.email ? 1 : 0) + (party.phone ? 1 : 0) + addrLines;
+    return Math.max(30, 13 + belowName * 4.6);
+  }
+
+  const boxHeight = Math.max(partyBoxHeight(seller), partyBoxHeight(buyer));
 
   function drawParty(
     label: string,
@@ -166,7 +198,7 @@ export async function generateBillOfSalePdf(
     x: number
   ) {
     pdf.setFillColor(248, 250, 252);
-    pdf.rect(x, blockTop - 6, 80, 30, "F");
+    pdf.rect(x, blockTop - 6, 80, boxHeight, "F");
     pdf.setFont("helvetica", "bold");
     pdf.setFontSize(9);
     pdf.setTextColor(120);
@@ -179,14 +211,14 @@ export async function generateBillOfSalePdf(
     let py = blockTop + 12;
     if (party.email) {
       pdf.text(party.email, x + 3, py);
-      py += 4.5;
+      py += 4.6;
     }
     if (party.phone) {
       pdf.text(party.phone, x + 3, py);
-      py += 4.5;
+      py += 4.6;
     }
     if (party.address) {
-      drawWrappedText(pdf, party.address, x + 3, py, 74, 4.5);
+      drawWrappedText(pdf, party.address, x + 3, py, 74, 4.6);
     }
   }
 
@@ -194,7 +226,7 @@ export async function generateBillOfSalePdf(
   drawParty("BUYER", buyer, 110);
 
   // ITEMS TABLE
-  const tableTop = 122;
+  const tableTop = blockTop - 6 + boxHeight + 14;
   const items: BillItem[] = Array.isArray(bill.items) ? bill.items : [];
 
   pdf.setFillColor(243, 244, 246);
