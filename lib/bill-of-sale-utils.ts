@@ -7,9 +7,18 @@ export type BillItem = {
   unitPrice: string;
 };
 
+// Which side of the sale the account owner (the business) is on. "seller" is the
+// classic bill of sale; "buyer" lets the owner document a purchase they made from
+// a private seller who provided no paperwork (proof of purchase). Either way the
+// other party is stored in the buyer_* columns and relabeled by role.
+export type BusinessRole = "seller" | "buyer";
+
 export type SavedBill = {
   id?: string;
   billNumber: string;
+  businessRole: BusinessRole;
+  // The counterparty (the other person): the buyer when the owner is the seller,
+  // or the seller when the owner is the buyer. Stored in buyer_* columns.
   buyerName: string;
   buyerEmail?: string;
   buyerPhone?: string;
@@ -21,6 +30,15 @@ export type SavedBill = {
   asIs: boolean;
   total: number;
 };
+
+// The counterparty's role is the opposite of the business's role.
+export function counterpartyLabel(businessRole: BusinessRole): "Seller" | "Buyer" {
+  return businessRole === "seller" ? "Buyer" : "Seller";
+}
+
+export function businessLabel(businessRole: BusinessRole): "Seller" | "Buyer" {
+  return businessRole === "seller" ? "Seller" : "Buyer";
+}
 
 export const AS_IS_CLAUSE =
   "The above item(s) are sold in \"AS-IS\" condition, without any warranty of " +

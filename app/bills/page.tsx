@@ -17,6 +17,7 @@ import { StatCardSkeleton, TableRowSkeleton } from "@/components/ui/Skeleton";
 type BillRow = {
   id: string;
   bill_number: string;
+  business_role: string | null;
   buyer_name: string;
   buyer_email: string | null;
   sale_date: string | null;
@@ -31,6 +32,7 @@ function mapRowToUI(row: BillRow): UIBill {
   return {
     id: row.id,
     billNumber: row.bill_number,
+    businessRole: row.business_role === "buyer" ? "buyer" : "seller",
     buyerName: row.buyer_name,
     buyerEmail: row.buyer_email || "",
     saleDate: row.sale_date || "",
@@ -63,7 +65,7 @@ export default function BillsPage() {
 
       const { data, error } = await supabase
         .from("bills_of_sale")
-        .select("id, bill_number, buyer_name, buyer_email, sale_date, items, total, created_at")
+        .select("id, bill_number, business_role, buyer_name, buyer_email, sale_date, items, total, created_at")
         .eq("user_id", user.id)
         .order("created_at", { ascending: false });
 
@@ -262,9 +264,20 @@ export default function BillsPage() {
                   <p className="truncate text-base font-semibold text-slate-950 dark:text-white">
                     {bill.buyerName}
                   </p>
-                  <p className="mt-1 text-sm text-slate-600 dark:text-slate-400">
-                    {bill.billNumber}
-                  </p>
+                  <div className="mt-1 flex items-center gap-2">
+                    <p className="text-sm text-slate-600 dark:text-slate-400">
+                      {bill.billNumber}
+                    </p>
+                    <span
+                      className={`inline-flex rounded-full px-2 py-0.5 text-[11px] font-semibold ${
+                        bill.businessRole === "buyer"
+                          ? "bg-blue-100 text-blue-700"
+                          : "bg-emerald-100 text-emerald-700"
+                      }`}
+                    >
+                      {bill.businessRole === "buyer" ? "Purchase" : "Sale"}
+                    </span>
+                  </div>
                 </div>
               </div>
 
@@ -313,7 +326,7 @@ export default function BillsPage() {
         <table className="min-w-full divide-y divide-slate-200 text-sm">
           <thead className="bg-slate-100/80 text-left text-slate-700 dark:text-slate-300">
             <tr>
-              <th className="px-5 py-4 font-semibold">Buyer</th>
+              <th className="px-5 py-4 font-semibold">Party</th>
               <th className="px-5 py-4 font-semibold">Document #</th>
               <th className="px-5 py-4 font-semibold">Sale Date</th>
               <th className="px-5 py-4 font-semibold">Total</th>
@@ -356,9 +369,20 @@ export default function BillsPage() {
                       <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-2xl bg-slate-900 text-sm font-bold text-white">
                         {getInitials(bill.buyerName)}
                       </div>
-                      <span className="font-semibold text-slate-950 dark:text-white">
-                        {bill.buyerName}
-                      </span>
+                      <div className="min-w-0">
+                        <span className="block font-semibold text-slate-950 dark:text-white">
+                          {bill.buyerName}
+                        </span>
+                        <span
+                          className={`mt-0.5 inline-flex rounded-full px-2 py-0.5 text-[11px] font-semibold ${
+                            bill.businessRole === "buyer"
+                              ? "bg-blue-100 text-blue-700"
+                              : "bg-emerald-100 text-emerald-700"
+                          }`}
+                        >
+                          {bill.businessRole === "buyer" ? "Purchase" : "Sale"}
+                        </span>
+                      </div>
                     </div>
                   </td>
                   <td className="px-5 py-4 text-slate-700 dark:text-slate-300">

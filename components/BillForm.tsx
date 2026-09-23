@@ -6,8 +6,10 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import {
   BillItem,
+  BusinessRole,
   SavedBill,
   calculateBillTotal,
+  counterpartyLabel,
   generateNextBillNumber,
   getBillItemAmount,
   isBillItemComplete,
@@ -18,6 +20,7 @@ import DescriptionField from "@/components/ui/DescriptionField";
 type BillRow = {
   id: string;
   bill_number: string;
+  business_role: string | null;
   buyer_name: string;
   buyer_email: string | null;
   buyer_phone: string | null;
@@ -51,6 +54,7 @@ export default function BillForm({
   const { toast } = useToast();
 
   const [billNumber, setBillNumber] = useState("");
+  const [businessRole, setBusinessRole] = useState<BusinessRole>("seller");
   const [buyerName, setBuyerName] = useState("");
   const [buyerEmail, setBuyerEmail] = useState("");
   const [buyerPhone, setBuyerPhone] = useState("");
@@ -100,6 +104,7 @@ export default function BillForm({
         const existing: SavedBill[] = ((data as { bill_number: string }[]) || []).map(
           (row) => ({
             billNumber: row.bill_number,
+            businessRole: "seller",
             buyerName: "",
             saleDate: "",
             items: [],
@@ -130,6 +135,7 @@ export default function BillForm({
 
       const row = data as BillRow;
       setBillNumber(row.bill_number);
+      setBusinessRole(row.business_role === "buyer" ? "buyer" : "seller");
       setBuyerName(row.buyer_name);
       setBuyerEmail(row.buyer_email || "");
       setBuyerPhone(row.buyer_phone || "");
@@ -187,7 +193,7 @@ export default function BillForm({
 
     if (!buyerName.trim() || !billNumber.trim() || hasInvalidItem) {
       toast(
-        "Add a buyer, a document number, and a description and price for each item.",
+        `Add the ${counterpartyLabel(businessRole).toLowerCase()}, a document number, and a description and price for each item.`,
         "error"
       );
       return;
@@ -206,6 +212,7 @@ export default function BillForm({
 
     const payload = {
       bill_number: billNumber.trim().toUpperCase(),
+      business_role: businessRole,
       buyer_name: buyerName.trim(),
       buyer_email: buyerEmail.trim() || null,
       buyer_phone: buyerPhone.trim() || null,
@@ -299,11 +306,63 @@ export default function BillForm({
       </div>
 
       <div className="rounded-3xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 p-5 shadow-sm sm:p-6 lg:p-8">
-        {/* Buyer */}
-        <div className="mb-2">
-          <h2 className="text-xl font-semibold text-slate-900 dark:text-slate-100">Buyer</h2>
+        {/* Role toggle */}
+        <div className="mb-6">
+          <h2 className="text-xl font-semibold text-slate-900 dark:text-slate-100">
+            Your Role in This Sale
+          </h2>
           <p className="mt-1 text-sm text-slate-500 dark:text-slate-400">
-            Who is receiving the goods. Prefill from a saved client if you like.
+            Choose whether you sold the item(s) or bought them. Use{" "}
+            <span className="font-medium">I&apos;m the Buyer</span> to create proof
+            of a purchase when the seller gave you no paperwork.
+          </p>
+
+          <div className="mt-4 grid gap-3 sm:grid-cols-2">
+            <button
+              type="button"
+              onClick={() => setBusinessRole("seller")}
+              className={`rounded-2xl border p-4 text-left transition ${
+                businessRole === "seller"
+                  ? "border-blue-500 bg-blue-50 ring-2 ring-blue-100 dark:bg-blue-950/40"
+                  : "border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 hover:border-slate-300"
+              }`}
+            >
+              <p className="text-sm font-semibold text-slate-900 dark:text-slate-100">
+                I&apos;m the Seller
+              </p>
+              <p className="mt-1 text-xs text-slate-500 dark:text-slate-400">
+                You sold the item(s). Records a standard bill of sale.
+              </p>
+            </button>
+
+            <button
+              type="button"
+              onClick={() => setBusinessRole("buyer")}
+              className={`rounded-2xl border p-4 text-left transition ${
+                businessRole === "buyer"
+                  ? "border-blue-500 bg-blue-50 ring-2 ring-blue-100 dark:bg-blue-950/40"
+                  : "border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 hover:border-slate-300"
+              }`}
+            >
+              <p className="text-sm font-semibold text-slate-900 dark:text-slate-100">
+                I&apos;m the Buyer
+              </p>
+              <p className="mt-1 text-xs text-slate-500 dark:text-slate-400">
+                You bought the item(s). Records proof of purchase.
+              </p>
+            </button>
+          </div>
+        </div>
+
+        {/* Counterparty */}
+        <div className="mb-2">
+          <h2 className="text-xl font-semibold text-slate-900 dark:text-slate-100">
+            {counterpartyLabel(businessRole)}
+          </h2>
+          <p className="mt-1 text-sm text-slate-500 dark:text-slate-400">
+            {businessRole === "seller"
+              ? "Who is receiving the goods. Prefill from a saved client if you like."
+              : "Who you bought the item(s) from. Prefill from a saved client if you like."}
           </p>
         </div>
 
@@ -330,7 +389,7 @@ export default function BillForm({
         <div className="grid gap-5 md:grid-cols-2">
           <div>
             <label className="mb-2 block text-sm font-medium text-slate-700 dark:text-slate-300">
-              Buyer Name
+              {counterpartyLabel(businessRole)} Name
             </label>
             <input
               value={buyerName}
@@ -352,7 +411,7 @@ export default function BillForm({
           </div>
           <div>
             <label className="mb-2 block text-sm font-medium text-slate-700 dark:text-slate-300">
-              Buyer Email
+              {counterpartyLabel(businessRole)} Email
             </label>
             <input
               type="email"
@@ -364,7 +423,7 @@ export default function BillForm({
           </div>
           <div>
             <label className="mb-2 block text-sm font-medium text-slate-700 dark:text-slate-300">
-              Buyer Phone
+              {counterpartyLabel(businessRole)} Phone
             </label>
             <input
               value={buyerPhone}
@@ -375,7 +434,7 @@ export default function BillForm({
           </div>
           <div className="md:col-span-2">
             <label className="mb-2 block text-sm font-medium text-slate-700 dark:text-slate-300">
-              Buyer Address
+              {counterpartyLabel(businessRole)} Address
             </label>
             <input
               value={buyerAddress}

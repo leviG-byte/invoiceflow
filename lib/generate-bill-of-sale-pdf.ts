@@ -140,52 +140,58 @@ export async function generateBillOfSalePdf(
   pdf.text(safeText(bill.saleDate), right, 60, { align: "right" });
   pdf.text(safeText(bill.paymentMethod), right, 68, { align: "right" });
 
+  // The business (owner) sits on one side; the counterparty on the other.
+  // Swap by role so a purchase prints with the business as the buyer.
+  const businessParty = {
+    name: businessProfile.businessName || "InvoiceFlow",
+    email: businessProfile.email,
+    phone: businessProfile.phone,
+    address: "",
+  };
+  const counterParty = {
+    name: bill.buyerName,
+    email: bill.buyerEmail || "",
+    phone: bill.buyerPhone || "",
+    address: bill.buyerAddress || "",
+  };
+  const seller = bill.businessRole === "buyer" ? counterParty : businessParty;
+  const buyer = bill.businessRole === "buyer" ? businessParty : counterParty;
+
   // SELLER + BUYER blocks
   const blockTop = 84;
 
-  pdf.setFillColor(248, 250, 252);
-  pdf.rect(left, blockTop - 6, 80, 30, "F");
-  pdf.setFont("helvetica", "bold");
-  pdf.setFontSize(9);
-  pdf.setTextColor(120);
-  pdf.text("SELLER", left + 3, blockTop);
-  pdf.setTextColor(0);
-  pdf.setFontSize(10);
-  pdf.text(safeText(businessProfile.businessName || "InvoiceFlow"), left + 3, blockTop + 7);
-  pdf.setFont("helvetica", "normal");
-  pdf.setFontSize(9);
-  let sy = blockTop + 12;
-  if (businessProfile.email) {
-    pdf.text(businessProfile.email, left + 3, sy);
-    sy += 4.5;
-  }
-  if (businessProfile.phone) {
-    pdf.text(businessProfile.phone, left + 3, sy);
+  function drawParty(
+    label: string,
+    party: { name: string; email: string; phone: string; address: string },
+    x: number
+  ) {
+    pdf.setFillColor(248, 250, 252);
+    pdf.rect(x, blockTop - 6, 80, 30, "F");
+    pdf.setFont("helvetica", "bold");
+    pdf.setFontSize(9);
+    pdf.setTextColor(120);
+    pdf.text(label, x + 3, blockTop);
+    pdf.setTextColor(0);
+    pdf.setFontSize(10);
+    pdf.text(safeText(party.name), x + 3, blockTop + 7);
+    pdf.setFont("helvetica", "normal");
+    pdf.setFontSize(9);
+    let py = blockTop + 12;
+    if (party.email) {
+      pdf.text(party.email, x + 3, py);
+      py += 4.5;
+    }
+    if (party.phone) {
+      pdf.text(party.phone, x + 3, py);
+      py += 4.5;
+    }
+    if (party.address) {
+      drawWrappedText(pdf, party.address, x + 3, py, 74, 4.5);
+    }
   }
 
-  pdf.setFillColor(248, 250, 252);
-  pdf.rect(110, blockTop - 6, 80, 30, "F");
-  pdf.setFont("helvetica", "bold");
-  pdf.setFontSize(9);
-  pdf.setTextColor(120);
-  pdf.text("BUYER", 113, blockTop);
-  pdf.setTextColor(0);
-  pdf.setFontSize(10);
-  pdf.text(safeText(bill.buyerName), 113, blockTop + 7);
-  pdf.setFont("helvetica", "normal");
-  pdf.setFontSize(9);
-  let by = blockTop + 12;
-  if (bill.buyerEmail) {
-    pdf.text(bill.buyerEmail, 113, by);
-    by += 4.5;
-  }
-  if (bill.buyerPhone) {
-    pdf.text(bill.buyerPhone, 113, by);
-    by += 4.5;
-  }
-  if (bill.buyerAddress) {
-    drawWrappedText(pdf, bill.buyerAddress, 113, by, 74, 4.5);
-  }
+  drawParty("SELLER", seller, left);
+  drawParty("BUYER", buyer, 110);
 
   // ITEMS TABLE
   const tableTop = 122;
@@ -271,13 +277,9 @@ export async function generateBillOfSalePdf(
   pdf.setFontSize(9);
   pdf.setTextColor(90);
   pdf.text("Seller Signature", left, signatureY + 5);
-  pdf.text(
-    safeText(businessProfile.businessName || "InvoiceFlow"),
-    left,
-    signatureY + 10
-  );
+  pdf.text(safeText(seller.name), left, signatureY + 10);
   pdf.text("Buyer Signature", right - 70, signatureY + 5);
-  pdf.text(safeText(bill.buyerName), right - 70, signatureY + 10);
+  pdf.text(safeText(buyer.name), right - 70, signatureY + 10);
   pdf.setTextColor(0);
 
   return pdf;

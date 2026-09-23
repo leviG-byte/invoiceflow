@@ -25,6 +25,7 @@ import { ArrowLeft, Download, Pencil } from "lucide-react";
 type BillRow = {
   id: string;
   bill_number: string;
+  business_role: string | null;
   buyer_name: string;
   buyer_email: string | null;
   buyer_phone: string | null;
@@ -105,6 +106,7 @@ export default function BillDetailPage() {
       setBill({
         id: row.id,
         billNumber: row.bill_number,
+        businessRole: row.business_role === "buyer" ? "buyer" : "seller",
         buyerName: row.buyer_name,
         buyerEmail: row.buyer_email || "",
         buyerPhone: row.buyer_phone || "",
@@ -187,6 +189,24 @@ export default function BillDetailPage() {
   const accentText = accentTextColor(accent);
   const hasCustomAccent = !!businessProfile.accentColor;
   const total = bill.total || calculateBillTotal(bill.items);
+
+  // The business (account owner) sits on one side of the sale; the counterparty
+  // (buyer_* fields) on the other. Swap the two by role so a purchase renders
+  // with the business as the buyer.
+  const businessParty = {
+    name: businessProfile.businessName || "InvoiceFlow",
+    email: businessProfile.email,
+    phone: businessProfile.phone,
+    address: businessProfile.address,
+  };
+  const counterParty = {
+    name: bill.buyerName,
+    email: bill.buyerEmail,
+    phone: bill.buyerPhone,
+    address: bill.buyerAddress,
+  };
+  const seller = bill.businessRole === "seller" ? businessParty : counterParty;
+  const buyer = bill.businessRole === "seller" ? counterParty : businessParty;
 
   return (
     <div className="mx-auto max-w-4xl space-y-6">
@@ -277,11 +297,13 @@ export default function BillDetailPage() {
                 Seller
               </p>
               <p className="mt-2 text-lg font-semibold text-slate-950">
-                {businessProfile.businessName || "InvoiceFlow"}
+                {seller.name}
               </p>
-              {businessProfile.email && (
-                <p className="mt-1 text-sm text-slate-500">{businessProfile.email}</p>
-              )}
+              <div className="mt-1 space-y-0.5 text-sm text-slate-500">
+                {seller.email && <p>{seller.email}</p>}
+                {seller.phone && <p>{seller.phone}</p>}
+                {seller.address && <p>{seller.address}</p>}
+              </div>
             </div>
 
             <div className="sm:text-right">
@@ -289,12 +311,12 @@ export default function BillDetailPage() {
                 Buyer
               </p>
               <p className="mt-2 text-lg font-semibold text-slate-950">
-                {bill.buyerName}
+                {buyer.name}
               </p>
               <div className="mt-1 space-y-0.5 text-sm text-slate-500">
-                {bill.buyerEmail && <p>{bill.buyerEmail}</p>}
-                {bill.buyerPhone && <p>{bill.buyerPhone}</p>}
-                {bill.buyerAddress && <p>{bill.buyerAddress}</p>}
+                {buyer.email && <p>{buyer.email}</p>}
+                {buyer.phone && <p>{buyer.phone}</p>}
+                {buyer.address && <p>{buyer.address}</p>}
               </div>
             </div>
 
@@ -419,16 +441,14 @@ export default function BillDetailPage() {
               <p className="mt-2 text-xs font-semibold uppercase tracking-widest text-slate-400">
                 Seller Signature
               </p>
-              <p className="mt-1 text-sm text-slate-600">
-                {businessProfile.businessName || "InvoiceFlow"}
-              </p>
+              <p className="mt-1 text-sm text-slate-600">{seller.name}</p>
             </div>
             <div>
               <div className="h-10 border-b border-slate-400" />
               <p className="mt-2 text-xs font-semibold uppercase tracking-widest text-slate-400">
                 Buyer Signature
               </p>
-              <p className="mt-1 text-sm text-slate-600">{bill.buyerName}</p>
+              <p className="mt-1 text-sm text-slate-600">{buyer.name}</p>
             </div>
           </div>
         </div>
